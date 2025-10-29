@@ -42,10 +42,14 @@
                 {{ getStepStatusText(step.status) }}
               </el-tag>
 
-              <!-- 步骤进度 -->
-              <div v-if="step.status === 'processing'" class="step-progress-mini">
-                <el-progress :percentage="step.progress" :show-text="false" :stroke-width="4" />
-              </div>
+              <!-- 步骤耗时 -->
+              <span v-if="step.status !== 'pending'" class="step-duration">
+                <template v-if="step.durationMs !== undefined">
+                  耗时 {{ formatDuration(step.durationMs) }}
+                </template>
+                <template v-else-if="step.status === 'processing'"> 正在执行... </template>
+                <template v-else> 耗时 -- </template>
+              </span>
             </div>
           </template>
 
@@ -108,6 +112,9 @@ export interface Step {
   details?: string[]
   error?: string
   result?: string // 新增: 步骤的实际结果内容
+  startTime?: number
+  endTime?: number
+  durationMs?: number
 }
 
 defineProps<{
@@ -132,6 +139,22 @@ const getStepTagType = (status: string) => {
     default:
       return 'info'
   }
+}
+
+const formatDuration = (durationMs?: number) => {
+  if (typeof durationMs !== 'number') {
+    return ''
+  }
+  if (durationMs < 1000) {
+    return `${durationMs} ms`
+  }
+  const seconds = durationMs / 1000
+  if (seconds < 60) {
+    return `${seconds.toFixed(1)} s`
+  }
+  const minutes = Math.floor(seconds / 60)
+  const remainder = seconds - minutes * 60
+  return `${minutes}m ${remainder.toFixed(1)}s`
 }
 
 const getStepStatusText = (status: string) => {
@@ -216,9 +239,11 @@ const getStepStatusText = (status: string) => {
         margin-left: auto;
       }
 
-      .step-progress-mini {
-        width: 100px;
+      .step-duration {
         margin-left: 12px;
+        font-size: 12px;
+        color: var(--el-text-color-secondary);
+        white-space: nowrap;
       }
     }
 

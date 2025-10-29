@@ -1,6 +1,7 @@
 import concurrent
 import json
 import os
+import time
 import traceback
 import urllib.parse
 import warnings
@@ -910,16 +911,59 @@ class LLMService:
                  finish_step: ChatFinishStep = ChatFinishStep.GENERATE_CHART):
         json_result: Dict[str, Any] = {'success': True}
         _session = None
+        step_metrics: Dict[int, Dict[str, Any]] = {}
+
+        def format_step_event(payload: Dict[str, Any]) -> str:
+            return 'data:' + orjson.dumps(payload).decode() + '\n\n'
+
+        def emit_step_start(step_id: int, message: str, extra: Optional[Dict[str, Any]] = None) -> str:
+            started_at = datetime.utcnow().isoformat() + 'Z'
+            step_metrics[step_id] = {
+                'start_time': time.perf_counter(),
+                'started_at': started_at,
+            }
+            payload = {
+                'type': 'step_start',
+                'step_id': step_id,
+                'message': message,
+                'timestamp': started_at,
+                'started_at': started_at,
+            }
+            if extra:
+                payload.update(extra)
+            return format_step_event(payload)
+
+        def emit_step_complete(step_id: int, message: str, result: Optional[Dict[str, Any]] = None,
+                                extra: Optional[Dict[str, Any]] = None) -> str:
+            finished_at = datetime.utcnow().isoformat() + 'Z'
+            metric = step_metrics.get(step_id, {})
+            duration_ms = None
+            if metric.get('start_time') is not None:
+                duration_ms = int((time.perf_counter() - metric['start_time']) * 1000)
+            payload = {
+                'type': 'step_complete',
+                'step_id': step_id,
+                'message': message,
+                'timestamp': finished_at,
+                'finished_at': finished_at,
+            }
+            if metric.get('started_at'):
+                payload['started_at'] = metric['started_at']
+            if duration_ms is not None:
+                payload['duration_ms'] = duration_ms
+                payload['duration_seconds'] = round(duration_ms / 1000, 3)
+            if result is not None:
+                payload['result'] = result
+            if extra:
+                payload.update(extra)
+            return format_step_event(payload)
+
         try:
             _session = session_maker()
 
             # 步骤1: 分析问题 - 开始
             if in_chat:
-                yield 'data:' + orjson.dumps({
-                    'type': 'step_start',
-                    'step_id': 1,
-                    'message': '正在分析您的问题...'
-                }).decode() + '\n\n'
+                yield emit_step_start(1, '正在分析您的问题...')
 
             if self.ds:
                 oid = self.ds.oid if isinstance(self.ds, CoreDatasource) else 1
@@ -936,11 +980,7 @@ class LLMService:
 
             # 步骤1: 分析问题 - 完成
             if in_chat:
-                yield 'data:' + orjson.dumps({
-                    'type': 'step_complete',
-                    'step_id': 1,
-                    'message': '问题分析完成'
-                }).decode() + '\n\n'
+                yield emit_step_complete(1, '问题分析完成')
 
             # return id
             if in_chat:
@@ -961,11 +1001,7 @@ class LLMService:
 
             # 步骤2: 选择数据源 - 开始
             if in_chat:
-                yield 'data:' + orjson.dumps({
-                    'type': 'step_start',
-                    'step_id': 2,
-                    'message': '正在选择合适的数据源...'
-                }).decode() + '\n\n'
+                yield emit_step_start(2, '正在选择合适的数据源...')
 
                 # select datasource if datasource is none
             if not self.ds:
@@ -994,19 +1030,11 @@ class LLMService:
             # 步骤2: 选择数据源 - 完成
             if in_chat:
                 ds_name = self.ds.name if self.ds else '未知'
-                yield 'data:' + orjson.dumps({
-                    'type': 'step_complete',
-                    'step_id': 2,
-                    'message': f'已选择数据源: {ds_name}'
-                }).decode() + '\n\n'
+                yield emit_step_complete(2, f'已选择数据源: {ds_name}')
 
             # 步骤3: 连接数据库 - 开始
             if in_chat:
-                yield 'data:' + orjson.dumps({
-                    'type': 'step_start',
-                    'step_id': 3,
-                    'message': '正在连接数据库...'
-                }).decode() + '\n\n'
+                yield emit_step_start(3, '正在连接数据库...')
 
             # check connection
             connected = check_connection(ds=self.ds, trans=None)
@@ -1015,19 +1043,11 @@ class LLMService:
 
             # 步骤3: 连接数据库 - 完成
             if in_chat:
-                yield 'data:' + orjson.dumps({
-                    'type': 'step_complete',
-                    'step_id': 3,
-                    'message': '数据库连接成功'
-                }).decode() + '\n\n'
+                yield emit_step_complete(3, '数据库连接成功')
 
             # 步骤4: 生成SQL - 开始
             if in_chat:
-                yield 'data:' + orjson.dumps({
-                    'type': 'step_start',
-                    'step_id': 4,
-                    'message': '正在生成SQL查询语句...'
-                }).decode() + '\n\n'
+                yield emit_step_start(4, '正在生成SQL查询语句...')
 
             # generate sql
             sql_res = self.generate_sql(_session)
@@ -1043,11 +1063,7 @@ class LLMService:
 
             # 步骤4: 生成SQL - 完成
             if in_chat:
-                yield 'data:' + orjson.dumps({
-                    'type': 'step_complete',
-                    'step_id': 4,
-                    'message': 'SQL语句生成完成'
-                }).decode() + '\n\n'
+                yield emit_step_complete(4, 'SQL语句生成完成')
 
             # filter sql
             SQLBotLogUtil.info(full_sql_text)
@@ -1113,11 +1129,7 @@ class LLMService:
 
             # 步骤5: 执行查询 - 开始
             if in_chat:
-                yield 'data:' + orjson.dumps({
-                    'type': 'step_start',
-                    'step_id': 5,
-                    'message': '正在执行SQL查询...'
-                }).decode() + '\n\n'
+                yield emit_step_start(5, '正在执行SQL查询...')
 
             result = self.execute_sql(sql=real_execute_sql)
             self.save_sql_data(session=_session, data_obj=result)
@@ -1135,12 +1147,11 @@ class LLMService:
                     'preview_rows': result.get('data', [])[:5] if result.get('data') else []  # 预览前5行
                 }
                 
-                yield 'data:' + orjson.dumps({
-                    'type': 'step_complete',
-                    'step_id': 5,
-                    'message': f'查询成功，返回 {row_count} 行 {col_count} 列数据',
-                    'result': result_summary
-                }).decode() + '\n\n'
+                yield emit_step_complete(
+                    5,
+                    f'查询成功，返回 {row_count} 行 {col_count} 列数据',
+                    result=result_summary,
+                )
 
             if in_chat:
                 yield 'data:' + orjson.dumps({'content': 'execute-success', 'type': 'sql-data'}).decode() + '\n\n'
@@ -1176,11 +1187,7 @@ class LLMService:
 
             # 步骤6: 配置图表 - 开始
             if in_chat:
-                yield 'data:' + orjson.dumps({
-                    'type': 'step_start',
-                    'step_id': 6,
-                    'message': '正在配置图表...'
-                }).decode() + '\n\n'
+                yield emit_step_start(6, '正在配置图表...')
 
             # generate chart
             chart_res = self.generate_chart(_session, chart_type)
@@ -1202,11 +1209,7 @@ class LLMService:
             # 步骤6: 配置图表 - 完成
             if in_chat:
                 chart_type_name = chart.get('type', '未知') if isinstance(chart, dict) else '未知'
-                yield 'data:' + orjson.dumps({
-                    'type': 'step_complete',
-                    'step_id': 6,
-                    'message': f'图表配置完成({chart_type_name})'
-                }).decode() + '\n\n'
+                yield emit_step_complete(6, f'图表配置完成({chart_type_name})')
 
             if not stream:
                 json_result['chart'] = chart

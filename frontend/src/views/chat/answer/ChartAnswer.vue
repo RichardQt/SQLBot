@@ -14,6 +14,9 @@ interface ProcessingStep {
   details?: string[]
   error?: string
   result?: string
+  startTime?: number
+  endTime?: number
+  durationMs?: number
 }
 
 const props = withDefaults(
@@ -116,6 +119,22 @@ const stepResults = ref<Record<number, any>>({
   6: null, // 图表配置
 })
 
+const parseTimestamp = (value?: string): number | undefined => {
+  if (!value) return undefined
+  const timeValue = new Date(value).getTime()
+  return Number.isNaN(timeValue) ? undefined : timeValue
+}
+
+const deriveDuration = (start?: number, end?: number, fallbackMs?: number): number | undefined => {
+  if (typeof fallbackMs === 'number') {
+    return fallbackMs
+  }
+  if (typeof start === 'number' && typeof end === 'number') {
+    return Math.max(end - start, 0)
+  }
+  return undefined
+}
+
 // 处理步骤事件
 const handleStepEvent = (data: any) => {
   showSteps.value = true
@@ -128,26 +147,52 @@ const handleStepEvent = (data: any) => {
     case 'step_start':
       step.status = 'processing'
       step.progress = 0
-      if (data.message) {
-        step.details = [data.message]
-      }
+      step.startTime = parseTimestamp(data.started_at || data.timestamp)
+      step.endTime = undefined
+      step.durationMs = undefined
+      step.error = undefined
+      step.details = data.message ? [data.message] : []
       break
     case 'step_progress':
       step.progress = data.progress || 0
-      if (data.message && step.details) {
+      if (!step.details) {
+        step.details = []
+      }
+      if (data.message) {
         step.details.push(data.message)
       }
       break
     case 'step_content':
-      if (data.content && step.details) {
+      if (!step.details) {
+        step.details = []
+      }
+      if (data.content) {
         step.details.push(data.content)
       }
       break
     case 'step_complete':
       step.status = 'completed'
       step.progress = 100
+      if (!step.details) {
+        step.details = []
+      }
       if (data.message && step.details) {
         step.details.push(data.message)
+      }
+      step.endTime = parseTimestamp(data.finished_at || data.timestamp)
+      if (!step.startTime) {
+        step.startTime = parseTimestamp(data.started_at)
+      }
+      {
+        const fallbackDuration =
+          typeof data.duration_ms === 'number'
+            ? data.duration_ms
+            : typeof data.duration_seconds === 'number'
+              ? Math.round(data.duration_seconds * 1000)
+              : undefined
+        const sanitizedFallback =
+          typeof fallbackDuration === 'number' ? Math.max(fallbackDuration, 0) : undefined
+        step.durationMs = deriveDuration(step.startTime, step.endTime, sanitizedFallback)
       }
       // 保存步骤结果数据
       if (data.result) {
@@ -170,6 +215,25 @@ const handleStepEvent = (data: any) => {
     case 'step_error':
       step.status = 'error'
       step.error = data.error || data.message
+      step.endTime = parseTimestamp(data.finished_at || data.timestamp)
+      if (!step.startTime) {
+        step.startTime = parseTimestamp(data.started_at)
+      }
+      {
+        const fallbackDuration =
+          typeof data.duration_ms === 'number'
+            ? data.duration_ms
+            : typeof data.duration_seconds === 'number'
+              ? Math.round(data.duration_seconds * 1000)
+              : undefined
+        const sanitizedFallback =
+          typeof fallbackDuration === 'number' ? Math.max(fallbackDuration, 0) : undefined
+        step.durationMs = deriveDuration(
+          step.startTime,
+          step.endTime ?? Date.now(),
+          sanitizedFallback
+        )
+      }
       break
   }
 
@@ -191,13 +255,18 @@ const sendMessage = async () => {
     step.progress = 0
     step.details = []
     step.error = undefined
+    step.result = ''
+    step.startTime = undefined
+    step.endTime = undefined
+    step.durationMs = undefined
   })
   overallProgress.value = 0
-  showSteps.value = false
   isCompleted.value = false
+  showSteps.value = true
 
   if (index.value < 0) {
     _loading.value = false
+    showSteps.value = false
     return
   }
 
