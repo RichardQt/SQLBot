@@ -214,10 +214,6 @@ const getStepStatusText = (status: string) => {
 
         &.status-processing {
           color: var(--el-color-primary);
-
-          &.rotating {
-            animation: rotate 1s linear infinite;
-          }
         }
 
         &.status-completed {
@@ -226,6 +222,11 @@ const getStepStatusText = (status: string) => {
 
         &.status-error {
           color: var(--el-color-danger);
+        }
+
+        .rotating {
+          animation: rotate 1s linear infinite;
+          transform-origin: center;
         }
       }
 
