@@ -912,6 +912,15 @@ class LLMService:
         _session = None
         try:
             _session = session_maker()
+
+            # 步骤1: 分析问题 - 开始
+            if in_chat:
+                yield 'data:' + orjson.dumps({
+                    'type': 'step_start',
+                    'step_id': 1,
+                    'message': '正在分析您的问题...'
+                }).decode() + '\n\n'
+
             if self.ds:
                 oid = self.ds.oid if isinstance(self.ds, CoreDatasource) else 1
                 ds_id = self.ds.id if isinstance(self.ds, CoreDatasource) else None
@@ -924,6 +933,14 @@ class LLMService:
                                                                            CustomPromptTypeEnum.GENERATE_SQL,
                                                                            oid, ds_id)
                 self.init_messages()
+
+            # 步骤1: 分析问题 - 完成
+            if in_chat:
+                yield 'data:' + orjson.dumps({
+                    'type': 'step_complete',
+                    'step_id': 1,
+                    'message': '问题分析完成'
+                }).decode() + '\n\n'
 
             # return id
             if in_chat:
@@ -941,6 +958,14 @@ class LLMService:
                         yield 'data:' + orjson.dumps({'type': 'brief', 'brief': brief}).decode() + '\n\n'
                     if not stream:
                         json_result['title'] = brief
+
+            # 步骤2: 选择数据源 - 开始
+            if in_chat:
+                yield 'data:' + orjson.dumps({
+                    'type': 'step_start',
+                    'step_id': 2,
+                    'message': '正在选择合适的数据源...'
+                }).decode() + '\n\n'
 
                 # select datasource if datasource is none
             if not self.ds:
@@ -966,10 +991,43 @@ class LLMService:
             else:
                 self.validate_history_ds(_session)
 
+            # 步骤2: 选择数据源 - 完成
+            if in_chat:
+                ds_name = self.ds.name if self.ds else '未知'
+                yield 'data:' + orjson.dumps({
+                    'type': 'step_complete',
+                    'step_id': 2,
+                    'message': f'已选择数据源: {ds_name}'
+                }).decode() + '\n\n'
+
+            # 步骤3: 连接数据库 - 开始
+            if in_chat:
+                yield 'data:' + orjson.dumps({
+                    'type': 'step_start',
+                    'step_id': 3,
+                    'message': '正在连接数据库...'
+                }).decode() + '\n\n'
+
             # check connection
             connected = check_connection(ds=self.ds, trans=None)
             if not connected:
                 raise SQLBotDBConnectionError('Connect DB failed')
+
+            # 步骤3: 连接数据库 - 完成
+            if in_chat:
+                yield 'data:' + orjson.dumps({
+                    'type': 'step_complete',
+                    'step_id': 3,
+                    'message': '数据库连接成功'
+                }).decode() + '\n\n'
+
+            # 步骤4: 生成SQL - 开始
+            if in_chat:
+                yield 'data:' + orjson.dumps({
+                    'type': 'step_start',
+                    'step_id': 4,
+                    'message': '正在生成SQL查询语句...'
+                }).decode() + '\n\n'
 
             # generate sql
             sql_res = self.generate_sql(_session)
@@ -982,6 +1040,15 @@ class LLMService:
                          'type': 'sql-result'}).decode() + '\n\n'
             if in_chat:
                 yield 'data:' + orjson.dumps({'type': 'info', 'msg': 'sql generated'}).decode() + '\n\n'
+
+            # 步骤4: 生成SQL - 完成
+            if in_chat:
+                yield 'data:' + orjson.dumps({
+                    'type': 'step_complete',
+                    'step_id': 4,
+                    'message': 'SQL语句生成完成'
+                }).decode() + '\n\n'
+
             # filter sql
             SQLBotLogUtil.info(full_sql_text)
 
@@ -1044,8 +1111,37 @@ class LLMService:
                     yield json_result
                 return
 
+            # 步骤5: 执行查询 - 开始
+            if in_chat:
+                yield 'data:' + orjson.dumps({
+                    'type': 'step_start',
+                    'step_id': 5,
+                    'message': '正在执行SQL查询...'
+                }).decode() + '\n\n'
+
             result = self.execute_sql(sql=real_execute_sql)
             self.save_sql_data(session=_session, data_obj=result)
+
+            # 步骤5: 执行查询 - 完成
+            if in_chat:
+                row_count = len(result.get('data', [])) if result.get('data') else 0
+                col_count = len(result.get('fields', [])) if result.get('fields') else 0
+                
+                # 构建查询结果摘要
+                result_summary = {
+                    'row_count': row_count,
+                    'col_count': col_count,
+                    'fields': result.get('fields', []),
+                    'preview_rows': result.get('data', [])[:5] if result.get('data') else []  # 预览前5行
+                }
+                
+                yield 'data:' + orjson.dumps({
+                    'type': 'step_complete',
+                    'step_id': 5,
+                    'message': f'查询成功，返回 {row_count} 行 {col_count} 列数据',
+                    'result': result_summary
+                }).decode() + '\n\n'
+
             if in_chat:
                 yield 'data:' + orjson.dumps({'content': 'execute-success', 'type': 'sql-data'}).decode() + '\n\n'
             if not stream:
@@ -1078,6 +1174,14 @@ class LLMService:
                     yield json_result
                 return
 
+            # 步骤6: 配置图表 - 开始
+            if in_chat:
+                yield 'data:' + orjson.dumps({
+                    'type': 'step_start',
+                    'step_id': 6,
+                    'message': '正在配置图表...'
+                }).decode() + '\n\n'
+
             # generate chart
             chart_res = self.generate_chart(_session, chart_type)
             full_chart_text = ''
@@ -1094,6 +1198,15 @@ class LLMService:
             SQLBotLogUtil.info(full_chart_text)
             chart = self.check_save_chart(session=_session, res=full_chart_text)
             SQLBotLogUtil.info(chart)
+
+            # 步骤6: 配置图表 - 完成
+            if in_chat:
+                chart_type_name = chart.get('type', '未知') if isinstance(chart, dict) else '未知'
+                yield 'data:' + orjson.dumps({
+                    'type': 'step_complete',
+                    'step_id': 6,
+                    'message': f'图表配置完成({chart_type_name})'
+                }).decode() + '\n\n'
 
             if not stream:
                 json_result['chart'] = chart
