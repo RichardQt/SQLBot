@@ -59,6 +59,12 @@ dynamic_subsql_prefix = 'select * from sqlbot_dynamic_temp_table_'
 
 session_maker = scoped_session(sessionmaker(bind=engine, class_=Session))
 
+MIN_STEP_DURATIONS: dict[int, float] = {
+    1: 0.8,
+    2: 0.6,
+    3: 0.6,
+}
+
 
 class LLMService:
     ds: CoreDatasource
@@ -917,35 +923,59 @@ class LLMService:
             return 'data:' + orjson.dumps(payload).decode() + '\n\n'
 
         def emit_step_start(step_id: int, message: str, extra: Optional[Dict[str, Any]] = None) -> str:
-            started_at = datetime.utcnow().isoformat() + 'Z'
+            started_at_iso = datetime.utcnow().isoformat() + 'Z'
+            perf_now = time.perf_counter()
             step_metrics[step_id] = {
-                'start_time': time.perf_counter(),
-                'started_at': started_at,
+                'start_time': perf_now,
+                'started_at': started_at_iso,
             }
             payload = {
                 'type': 'step_start',
                 'step_id': step_id,
                 'message': message,
-                'timestamp': started_at,
-                'started_at': started_at,
+                'timestamp': started_at_iso,
+                'started_at': started_at_iso,
             }
             if extra:
                 payload.update(extra)
             return format_step_event(payload)
 
-        def emit_step_complete(step_id: int, message: str, result: Optional[Dict[str, Any]] = None,
+        def emit_step_progress(step_id: int, progress: int, message: Optional[str] = None,
                                 extra: Optional[Dict[str, Any]] = None) -> str:
-            finished_at = datetime.utcnow().isoformat() + 'Z'
+            payload: Dict[str, Any] = {
+                'type': 'step_progress',
+                'step_id': step_id,
+                'progress': max(0, min(progress, 100)),
+                'timestamp': datetime.utcnow().isoformat() + 'Z',
+            }
+            if message:
+                payload['message'] = message
+            if extra:
+                payload.update(extra)
+            return format_step_event(payload)
+
+        def emit_step_complete(step_id: int, message: str, result: Optional[Dict[str, Any]] = None,
+                                extra: Optional[Dict[str, Any]] = None,
+                                min_duration: Optional[float] = None) -> str:
             metric = step_metrics.get(step_id, {})
+            start_perf = metric.get('start_time')
+            if min_duration and start_perf is not None:
+                elapsed = time.perf_counter() - start_perf
+                remaining = min_duration - elapsed
+                if remaining > 0:
+                    time.sleep(remaining)
+            finished_at_iso = datetime.utcnow().isoformat() + 'Z'
+            end_perf = time.perf_counter()
             duration_ms = None
-            if metric.get('start_time') is not None:
-                duration_ms = int((time.perf_counter() - metric['start_time']) * 1000)
+            if start_perf is not None:
+                duration_ms = int(max(end_perf - start_perf, 0) * 1000)
+                metric['end_time'] = end_perf
             payload = {
                 'type': 'step_complete',
                 'step_id': step_id,
                 'message': message,
-                'timestamp': finished_at,
-                'finished_at': finished_at,
+                'timestamp': finished_at_iso,
+                'finished_at': finished_at_iso,
             }
             if metric.get('started_at'):
                 payload['started_at'] = metric['started_at']
@@ -964,6 +994,8 @@ class LLMService:
             # 步骤1: 分析问题 - 开始
             if in_chat:
                 yield emit_step_start(1, '正在分析您的问题...')
+                time.sleep(0.12)
+                yield emit_step_progress(1, 25, '识别问题意图...')
 
             if self.ds:
                 oid = self.ds.oid if isinstance(self.ds, CoreDatasource) else 1
@@ -977,10 +1009,20 @@ class LLMService:
                                                                            CustomPromptTypeEnum.GENERATE_SQL,
                                                                            oid, ds_id)
                 self.init_messages()
+                if in_chat:
+                    yield emit_step_progress(1, 60, '整合历史信息与业务术语')
+                    time.sleep(0.08)
+            else:
+                if in_chat:
+                    yield emit_step_progress(1, 55, '整理已有对话上下文')
+
+            if in_chat:
+                yield emit_step_progress(1, 85, '构建初始提示词')
+                time.sleep(0.05)
 
             # 步骤1: 分析问题 - 完成
             if in_chat:
-                yield emit_step_complete(1, '问题分析完成')
+                yield emit_step_complete(1, '问题分析完成', min_duration=MIN_STEP_DURATIONS.get(1))
 
             # return id
             if in_chat:
@@ -1002,6 +1044,8 @@ class LLMService:
             # 步骤2: 选择数据源 - 开始
             if in_chat:
                 yield emit_step_start(2, '正在选择合适的数据源...')
+                time.sleep(0.1)
+                yield emit_step_progress(2, 30, '检索可用数据源列表')
 
                 # select datasource if datasource is none
             if not self.ds:
@@ -1014,6 +1058,7 @@ class LLMService:
                             {'content': chunk.get('content'), 'reasoning_content': chunk.get('reasoning_content'),
                              'type': 'datasource-result'}).decode() + '\n\n'
                 if in_chat:
+                    yield emit_step_progress(2, 70, '完成数据源推荐与匹配')
                     yield 'data:' + orjson.dumps({'id': self.ds.id, 'datasource_name': self.ds.name,
                                                   'engine_type': self.ds.type_name or self.ds.type,
                                                   'type': 'datasource'}).decode() + '\n\n'
@@ -1026,24 +1071,34 @@ class LLMService:
                     question=self.chat_question.question)
             else:
                 self.validate_history_ds(_session)
+                if in_chat:
+                    yield emit_step_progress(2, 65, '校验历史数据源配置')
 
             # 步骤2: 选择数据源 - 完成
             if in_chat:
                 ds_name = self.ds.name if self.ds else '未知'
-                yield emit_step_complete(2, f'已选择数据源: {ds_name}')
+                yield emit_step_progress(2, 90, '准备数据源上下文')
+                time.sleep(0.05)
+                yield emit_step_complete(2, f'已选择数据源: {ds_name}',
+                                         min_duration=MIN_STEP_DURATIONS.get(2))
 
             # 步骤3: 连接数据库 - 开始
             if in_chat:
                 yield emit_step_start(3, '正在连接数据库...')
+                time.sleep(0.1)
+                yield emit_step_progress(3, 40, '建立安全连接通道')
 
             # check connection
             connected = check_connection(ds=self.ds, trans=None)
             if not connected:
                 raise SQLBotDBConnectionError('Connect DB failed')
+            if in_chat:
+                yield emit_step_progress(3, 80, '验证数据库连接状态')
 
             # 步骤3: 连接数据库 - 完成
             if in_chat:
-                yield emit_step_complete(3, '数据库连接成功')
+                time.sleep(0.05)
+                yield emit_step_complete(3, '数据库连接成功', min_duration=MIN_STEP_DURATIONS.get(3))
 
             # 步骤4: 生成SQL - 开始
             if in_chat:
