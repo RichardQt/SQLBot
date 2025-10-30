@@ -60,9 +60,9 @@ dynamic_subsql_prefix = 'select * from sqlbot_dynamic_temp_table_'
 session_maker = scoped_session(sessionmaker(bind=engine, class_=Session))
 
 MIN_STEP_DURATIONS: dict[int, float] = {
-    1: 0.8,
-    2: 0.6,
-    3: 0.6,
+    1: 2.1,
+    2: 1.2,
+    3: 1.6,
 }
 
 
@@ -1044,8 +1044,6 @@ class LLMService:
             # 步骤2: 选择数据源 - 开始
             if in_chat:
                 yield emit_step_start(2, '正在选择合适的数据源...')
-                time.sleep(0.1)
-                yield emit_step_progress(2, 30, '检索可用数据源列表')
 
                 # select datasource if datasource is none
             if not self.ds:
@@ -1058,7 +1056,6 @@ class LLMService:
                             {'content': chunk.get('content'), 'reasoning_content': chunk.get('reasoning_content'),
                              'type': 'datasource-result'}).decode() + '\n\n'
                 if in_chat:
-                    yield emit_step_progress(2, 70, '完成数据源推荐与匹配')
                     yield 'data:' + orjson.dumps({'id': self.ds.id, 'datasource_name': self.ds.name,
                                                   'engine_type': self.ds.type_name or self.ds.type,
                                                   'type': 'datasource'}).decode() + '\n\n'
@@ -1071,33 +1068,24 @@ class LLMService:
                     question=self.chat_question.question)
             else:
                 self.validate_history_ds(_session)
-                if in_chat:
-                    yield emit_step_progress(2, 65, '校验历史数据源配置')
 
             # 步骤2: 选择数据源 - 完成
             if in_chat:
                 ds_name = self.ds.name if self.ds else '未知'
-                yield emit_step_progress(2, 90, '准备数据源上下文')
-                time.sleep(0.05)
                 yield emit_step_complete(2, f'已选择数据源: {ds_name}',
                                          min_duration=MIN_STEP_DURATIONS.get(2))
 
             # 步骤3: 连接数据库 - 开始
             if in_chat:
                 yield emit_step_start(3, '正在连接数据库...')
-                time.sleep(0.1)
-                yield emit_step_progress(3, 40, '建立安全连接通道')
 
             # check connection
             connected = check_connection(ds=self.ds, trans=None)
             if not connected:
                 raise SQLBotDBConnectionError('Connect DB failed')
-            if in_chat:
-                yield emit_step_progress(3, 80, '验证数据库连接状态')
 
             # 步骤3: 连接数据库 - 完成
             if in_chat:
-                time.sleep(0.05)
                 yield emit_step_complete(3, '数据库连接成功', min_duration=MIN_STEP_DURATIONS.get(3))
 
             # 步骤4: 生成SQL - 开始

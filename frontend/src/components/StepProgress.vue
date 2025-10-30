@@ -101,7 +101,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { Loading, Check, Close, Clock, DocumentCopy, InfoFilled } from '@element-plus/icons-vue'
 
 export interface Step {
@@ -117,14 +117,56 @@ export interface Step {
   durationMs?: number
 }
 
-defineProps<{
+const props = defineProps<{
   steps: Step[]
   overallProgress: number
   overallTitle: string
   isCompleted: boolean
 }>()
 
-const activeSteps = ref<number[]>([])
+const activeSteps = ref<string | number>('')
+let expandTimer: ReturnType<typeof setTimeout> | null = null
+
+// 监听步骤变化,自动展开当前进行中的步骤
+watch(
+  () => props.steps,
+  (newSteps) => {
+    // 查找正在进行的步骤
+    const processingStep = newSteps.find((step) => step.status === 'processing')
+
+    if (processingStep) {
+      // 清除之前的定时器
+      if (expandTimer) {
+        clearTimeout(expandTimer)
+      }
+
+      // 立即展开当前步骤
+      activeSteps.value = processingStep.id
+    } else {
+      // 查找最近完成的步骤
+      const completedSteps = newSteps.filter((step) => step.status === 'completed')
+      if (completedSteps.length > 0) {
+        const lastCompletedStep = completedSteps[completedSteps.length - 1]
+
+        // 展开最后完成的步骤
+        activeSteps.value = lastCompletedStep.id
+
+        // 1秒后关闭
+        if (expandTimer) {
+          clearTimeout(expandTimer)
+        }
+        expandTimer = setTimeout(() => {
+          // 如果没有新的 processing 步骤,则关闭
+          const currentProcessingStep = props.steps.find((step) => step.status === 'processing')
+          if (!currentProcessingStep) {
+            activeSteps.value = ''
+          }
+        }, 1000)
+      }
+    }
+  },
+  { deep: true, immediate: true }
+)
 
 const getStepTagType = (status: string) => {
   switch (status) {
