@@ -81,13 +81,14 @@ class Settings(BaseSettings):
             path=self.POSTGRES_DB,
         )
 
-    MCP_IMAGE_PATH: str = '/opt/sqlbot/images'
+    # MCP 功能相关配置（已禁用）
+    # MCP_IMAGE_PATH: str = '/opt/sqlbot/images'
     EXCEL_PATH: str = '/opt/sqlbot/data/excel'
-    MCP_IMAGE_HOST: str = 'http://localhost:3000'
-    SERVER_IMAGE_HOST: str = 'http://YOUR_SERVE_IP:MCP_PORT/images/'
+    # MCP_IMAGE_HOST: str = 'http://localhost:3000'
+    # SERVER_IMAGE_HOST: str = 'http://YOUR_SERVE_IP:MCP_PORT/images/'
 
     LOCAL_MODEL_PATH: str = '/opt/sqlbot/models'
-    DEFAULT_EMBEDDING_MODEL: str = 'shibing624/text2vec-base-chinese'
+    DEFAULT_EMBEDDING_MODEL: str = 'backend/bge-large-zh-v1.5'
     EMBEDDING_ENABLED: bool = True
     EMBEDDING_DEFAULT_SIMILARITY: float = 0.4
     EMBEDDING_TERMINOLOGY_SIMILARITY: float = EMBEDDING_DEFAULT_SIMILARITY

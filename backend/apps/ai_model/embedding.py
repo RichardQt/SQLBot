@@ -17,9 +17,10 @@ class EmbeddingModelInfo(BaseModel):
     device: str = 'cpu'
 
 
-local_embedding_model = EmbeddingModelInfo(folder=settings.LOCAL_MODEL_PATH,
-                                           name=os.path.join(settings.LOCAL_MODEL_PATH,
-                                                             "text2vec-base-chinese"))
+local_embedding_model = EmbeddingModelInfo(
+    folder=settings.LOCAL_MODEL_PATH,
+    name=os.path.join(settings.LOCAL_MODEL_PATH, settings.DEFAULT_EMBEDDING_MODEL)
+)
 
 _lock = threading.Lock()
 locks = {}

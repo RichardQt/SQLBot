@@ -1,6 +1,6 @@
 services:
   sqlbot:
-    image: registry.cn-qingdao.aliyuncs.com/images-lsr/sqlbot:dev-rc1
+    image: dataease/sqlbot
     container_name: sqlbot
     restart: always
     privileged: true
@@ -9,7 +9,6 @@ services:
     ports:
       - 8000:8000
       - 8001:8001
-      - 5432:5432
     environment:
       # Database configuration
       POSTGRES_SERVER: localhost
@@ -20,24 +19,21 @@ services:
       # Project basic settings
       PROJECT_NAME: "SQLBot"
       DEFAULT_PWD: "SQLBot@123456"
-      # MCP settings (已禁用)
-      # SERVER_IMAGE_HOST: http://YOUR_SERVE_IP:MCP_PORT/images/
       # Auth & Security
       SECRET_KEY: y5txe1mRmS_JpOrUzFzHEu-kIQn3lf7ll0AOv9DQh0s
       # CORS settings
-      BACKEND_CORS_ORIGINS: "http://localhost,http://localhost:5173,http://localhost:808,https://localhost,https://localhost:5173"
+      BACKEND_CORS_ORIGINS: "http://localhost,http://localhost:5173,https://localhost,https://localhost:5173"
       # Logging
       LOG_LEVEL: "INFO"
       SQL_DEBUG: False
     volumes:
+      # Data volumes
       - ./data/sqlbot/excel:/opt/sqlbot/data/excel
       - ./data/sqlbot/file:/opt/sqlbot/data/file
-      # MCP 图片功能已禁用，不需要挂载 images 目录
-      # - ./data/sqlbot/images:/opt/sqlbot/images
       - ./data/sqlbot/logs:/opt/sqlbot/app/logs
       - ./data/postgresql:/var/lib/postgresql/data
-    extra_hosts:
-      - "aiae.nj.gov.cn:10.192.15.152"
+      # Model volume (read-only) - 通过 volume 挂载模型
+      - ./backend/text2vec-base-chinese:/opt/sqlbot/models/text2vec-base-chinese:ro
 
 networks:
   sqlbot-network:

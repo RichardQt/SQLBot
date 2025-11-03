@@ -5,8 +5,9 @@ from alembic.config import Config
 from fastapi import FastAPI
 from fastapi.concurrency import asynccontextmanager
 from fastapi.routing import APIRoute
-from fastapi.staticfiles import StaticFiles
-from fastapi_mcp import FastApiMCP
+# MCP 功能已禁用
+# from fastapi.staticfiles import StaticFiles
+# from fastapi_mcp import FastApiMCP
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.cors import CORSMiddleware
 
@@ -67,22 +68,23 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-mcp_app = FastAPI()
-# mcp server, images path
-images_path = settings.MCP_IMAGE_PATH
-os.makedirs(images_path, exist_ok=True)
-mcp_app.mount("/images", StaticFiles(directory=images_path), name="images")
-
-mcp = FastApiMCP(
-    app,
-    name="SQLBot MCP Server",
-    description="SQLBot MCP Server",
-    describe_all_responses=True,
-    describe_full_response_schema=True,
-    include_operations=["get_datasource_list", "get_model_list", "mcp_question", "mcp_start", "mcp_assistant"]
-)
-
-mcp.mount(mcp_app)
+# MCP 功能已禁用
+# mcp_app = FastAPI()
+# # mcp server, images path
+# images_path = settings.MCP_IMAGE_PATH
+# os.makedirs(images_path, exist_ok=True)
+# mcp_app.mount("/images", StaticFiles(directory=images_path), name="images")
+# 
+# mcp = FastApiMCP(
+#     app,
+#     name="SQLBot MCP Server",
+#     description="SQLBot MCP Server",
+#     describe_all_responses=True,
+#     describe_full_response_schema=True,
+#     include_operations=["get_datasource_list", "get_model_list", "mcp_question", "mcp_start", "mcp_assistant"]
+# )
+# 
+# mcp.mount(mcp_app)
 
 # Set all CORS enabled origins
 if settings.all_cors_origins:
@@ -102,7 +104,8 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
 app.add_exception_handler(StarletteHTTPException, exception_handler.http_exception_handler)
 app.add_exception_handler(Exception, exception_handler.global_exception_handler)
 
-mcp.setup_server()
+# MCP 功能已禁用
+# mcp.setup_server()
 
 sqlbot_xpack.init_fastapi_app(app)
 if __name__ == "__main__":

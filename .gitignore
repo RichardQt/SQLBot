@@ -8,6 +8,9 @@ node_modules/
 *-lock.json
 components.d.ts
 
+#pg数据
+data/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

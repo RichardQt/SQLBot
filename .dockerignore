@@ -1,7 +1,10 @@
 # Python
-backend/__pycache__
+
+backend/**pycache**
+backend/**/**pycache**
 backend/app.egg-info
-backend/*.pyc
+backend/\*.pyc
+backend/**/\*.pyc
 backend/.mypy_cache
 backend/.coverage
 backend/htmlcov
@@ -10,3 +13,41 @@ backend/.gitignore
 backend/README.md
 backend/scripts
 backend/.DS_Store
+backend/logs
+backend/tests
+
+# Frontend
+
+frontend/node_modules
+frontend/dist
+frontend/.vite
+
+# Model directories that are not needed in build
+
+# Keep text2vec-base-chinese but exclude unnecessary files
+
+backend/text2vec-base-chinese/.git
+backend/text2vec-base-chinese/.gitattributes
+backend/text2vec-base-chinese/logs.txt
+backend/text2vec-base-chinese/pytorch_model.bin
+backend/text2vec-base-chinese/onnx
+backend/text2vec-base-chinese/openvino
+
+# Git and IDE
+
+.git
+.gitignore
+.vscode
+.idea
+_.swp
+_.swo
+
+# Documentation (except main README)
+
+\*.md
+!README.md
+
+# Installer and other tools
+
+installer/
+g2-ssr/node_modules

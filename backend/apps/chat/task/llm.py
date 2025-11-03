@@ -1491,18 +1491,22 @@ def request_picture(chat_id: int, record_id: int, chart: dict, data: dict):
     if series:
         axis.append({'name': series.get('name'), 'value': series.get('value'), 'type': 'series'})
 
-    request_obj = {
-        "path": os.path.join(settings.MCP_IMAGE_PATH, file_name),
-        "type": chart['type'],
-        "data": orjson.dumps(data.get('data') if data.get('data') else []).decode(),
-        "axis": orjson.dumps(axis).decode(),
-    }
-
-    requests.post(url=settings.MCP_IMAGE_HOST, json=request_obj)
-
-    request_path = urllib.parse.urljoin(settings.SERVER_IMAGE_HOST, f"{file_name}.png")
-
-    return request_path
+    # MCP 功能已禁用 - 图表生成功能不可用
+    # request_obj = {
+    #     "path": os.path.join(settings.MCP_IMAGE_PATH, file_name),
+    #     "type": chart['type'],
+    #     "data": orjson.dumps(data.get('data') if data.get('data') else []).decode(),
+    #     "axis": orjson.dumps(axis).decode(),
+    # }
+    # 
+    # requests.post(url=settings.MCP_IMAGE_HOST, json=request_obj)
+    # 
+    # request_path = urllib.parse.urljoin(settings.SERVER_IMAGE_HOST, f"{file_name}.png")
+    # 
+    # return request_path
+    
+    # 返回空字符串，因为 MCP 图表功能已禁用
+    return ""
 
 
 def get_token_usage(chunk: BaseMessageChunk, token_usage: dict = None):
