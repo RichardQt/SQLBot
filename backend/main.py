@@ -41,11 +41,32 @@ def init_table_and_ds_embedding():
     fill_empty_table_and_ds_embeddings()
 
 
+def preload_embedding_model():
+    """预加载 embedding 模型到内存"""
+    try:
+        from apps.ai_model.embedding import EmbeddingModelCache
+        SQLBotLogUtil.info("🔄 开始预加载 embedding 模型...")
+        start_time = __import__('time').time()
+        
+        # 预加载模型
+        model = EmbeddingModelCache.get_model()
+        
+        # 进行一次预热推理
+        _ = model.embed_query("测试")
+        
+        elapsed = __import__('time').time() - start_time
+        SQLBotLogUtil.info(f"Embedding 模型预加载完成，耗时: {elapsed:.2f}秒")
+    except Exception as e:
+        SQLBotLogUtil.error(f"Embedding 模型预加载失败: {str(e)}")
+        # 不阻断应用启动，允许后续懒加载
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     run_migrations()
     init_sqlbot_cache()
     init_dynamic_cors(app)
+    preload_embedding_model()  # 预加载 embedding 模型
     init_terminology_embedding_data()
     init_data_training_embedding_data()
     init_table_and_ds_embedding()

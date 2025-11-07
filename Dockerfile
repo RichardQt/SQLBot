@@ -93,8 +93,11 @@ COPY start.sh /opt/sqlbot/app/start.sh
 # COPY g2-ssr/*.ttf /usr/share/fonts/truetype/liberation/
 COPY --from=sqlbot-builder ${SQLBOT_HOME} ${SQLBOT_HOME}
 # COPY --from=ssr-builder /app /opt/sqlbot/g2-ssr
-# Copy local text2vec model (from backend/text2vec-base-chinese)
-COPY ./backend/text2vec-base-chinese /opt/sqlbot/models/text2vec-base-chinese
+# # Copy local text2vec model (from backend/text2vec-base-chinese)
+# COPY ./backend/text2vec-base-chinese /opt/sqlbot/models/text2vec-base-chinese
+
+# Copy local text2vec model (from backend/bge-large-zh-v1.5)
+COPY ./backend/bge-large-zh-v1.5 /opt/sqlbot/models/backend/bge-large-zh-v1.5
 
 WORKDIR ${SQLBOT_HOME}/app
 

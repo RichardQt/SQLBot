@@ -1,7 +1,7 @@
 services:
   sqlbot:
-    image: registry.cn-qingdao.aliyuncs.com/images-lsr/sqlbot:dev-rc1
-    container_name: sqlbot
+    image: registry.cn-heyuan.aliyuncs.com/images-lsr/sqlbot_rc2:dev-rc2
+    container_name: sqlbot_rc2
     restart: always
     privileged: true
     networks:
@@ -25,7 +25,7 @@ services:
       # Auth & Security
       SECRET_KEY: y5txe1mRmS_JpOrUzFzHEu-kIQn3lf7ll0AOv9DQh0s
       # CORS settings
-      BACKEND_CORS_ORIGINS: "http://localhost,http://localhost:5173,http://localhost:808,https://localhost,https://localhost:5173"
+      BACKEND_CORS_ORIGINS: "http://localhost,http://localhost:5173,http://localhost:808,http://localhost:8000,https://localhost,https://localhost:5173"
       # Logging
       LOG_LEVEL: "INFO"
       SQL_DEBUG: False
