@@ -37,7 +37,8 @@ CACHE 1
   "reasoning_content" text COLLATE "pg_catalog"."default",
   "start_time" timestamp(6),
   "finish_time" timestamp(6),
-  "token_usage" jsonb
+  "token_usage" jsonb,
+  "feedback" varchar(10) COLLATE "pg_catalog"."default"
 )
 ;
 

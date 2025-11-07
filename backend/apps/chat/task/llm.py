@@ -1295,7 +1295,13 @@ class LLMService:
                         yield markdown_table + '\n\n'
 
             if in_chat:
-                yield 'data:' + orjson.dumps({'type': 'finish'}).decode() + '\n\n'
+                # Return log IDs for feedback feature
+                finish_data = {'type': 'finish'}
+                if OperationEnum.GENERATE_SQL in self.current_logs:
+                    finish_data['sql_log_id'] = self.current_logs[OperationEnum.GENERATE_SQL].id
+                if OperationEnum.GENERATE_CHART in self.current_logs:
+                    finish_data['chart_log_id'] = self.current_logs[OperationEnum.GENERATE_CHART].id
+                yield 'data:' + orjson.dumps(finish_data).decode() + '\n\n'
             else:
                 # todo generate picture
                 if chart['type'] != 'table':

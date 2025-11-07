@@ -416,6 +416,13 @@ const sendMessage = async () => {
                 break
               }
               case 'finish':
+                // Update log IDs for feedback feature
+                if (data.sql_log_id) {
+                  currentRecord.sql_log_id = data.sql_log_id
+                }
+                if (data.chart_log_id) {
+                  currentRecord.chart_log_id = data.chart_log_id
+                }
                 emits('finish', currentRecord.id)
                 break
             }

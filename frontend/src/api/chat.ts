@@ -51,6 +51,10 @@ export class ChatRecord {
   recommended_question?: string
   analysis_record_id?: number
   predict_record_id?: number
+  sql_log_id?: number
+  chart_log_id?: number
+  sql_feedback?: string
+  chart_feedback?: string
 
   constructor()
   constructor(
@@ -75,7 +79,11 @@ export class ChatRecord {
     first_chat: boolean,
     recommended_question: string | undefined,
     analysis_record_id: number | undefined,
-    predict_record_id: number | undefined
+    predict_record_id: number | undefined,
+    sql_log_id?: number,
+    chart_log_id?: number,
+    sql_feedback?: string,
+    chart_feedback?: string
   )
   constructor(
     id?: number,
@@ -99,7 +107,11 @@ export class ChatRecord {
     first_chat?: boolean,
     recommended_question?: string,
     analysis_record_id?: number,
-    predict_record_id?: number
+    predict_record_id?: number,
+    sql_log_id?: number,
+    chart_log_id?: number,
+    sql_feedback?: string,
+    chart_feedback?: string
   ) {
     this.id = id
     this.chat_id = chat_id
@@ -123,6 +135,10 @@ export class ChatRecord {
     this.recommended_question = recommended_question
     this.analysis_record_id = analysis_record_id
     this.predict_record_id = predict_record_id
+    this.sql_log_id = sql_log_id
+    this.chart_log_id = chart_log_id
+    this.sql_feedback = sql_feedback
+    this.chart_feedback = chart_feedback
   }
 }
 
@@ -252,7 +268,11 @@ const toChatRecord = (data?: any): ChatRecord | undefined => {
     data.first_chat,
     data.recommended_question,
     data.analysis_record_id,
-    data.predict_record_id
+    data.predict_record_id,
+    data.sql_log_id,
+    data.chart_log_id,
+    data.sql_feedback,
+    data.chart_feedback
   )
 }
 const toChatRecordList = (list: any = []): ChatRecord[] => {
@@ -337,4 +357,6 @@ export const chatApi = {
       responseType: 'blob',
       requestOptions: { customError: true },
     }),
+  updateFeedback: (log_id: number, feedback: 'like' | 'dislike') =>
+    request.post(`/chat/log/${log_id}/feedback?feedback=${feedback}`),
 }

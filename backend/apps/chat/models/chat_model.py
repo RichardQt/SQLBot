@@ -65,6 +65,7 @@ class ChatLog(SQLModel, table=True):
     start_time: datetime = Field(sa_column=Column(DateTime(timezone=False), nullable=True))
     finish_time: datetime = Field(sa_column=Column(DateTime(timezone=False), nullable=True))
     token_usage: Optional[dict | None | int] = Field(sa_column=Column(JSONB))
+    feedback: Optional[str] = Field(max_length=10, nullable=True)
 
 
 class Chat(SQLModel, table=True):
@@ -137,6 +138,10 @@ class ChatRecordResult(BaseModel):
     chart_reasoning_content: Optional[str] = None
     analysis_reasoning_content: Optional[str] = None
     predict_reasoning_content: Optional[str] = None
+    sql_log_id: Optional[int] = None
+    chart_log_id: Optional[int] = None
+    sql_feedback: Optional[str] = None
+    chart_feedback: Optional[str] = None
 
 
 class CreateChat(BaseModel):

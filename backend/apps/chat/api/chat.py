@@ -10,7 +10,7 @@ from sqlalchemy import and_, select
 
 from apps.chat.curd.chat import list_chats, get_chat_with_records, create_chat, rename_chat, \
     delete_chat, get_chat_chart_data, get_chat_predict_data, get_chat_with_records_with_data, get_chat_record_by_id, \
-    format_json_data, format_json_list_data
+    format_json_data, format_json_list_data, update_chat_log_feedback
 from apps.chat.models.chat_model import CreateChat, ChatRecord, RenameChat, ChatQuestion, ExcelData
 from apps.chat.task.llm import LLMService
 from common.core.deps import CurrentAssistant, SessionDep, CurrentUser, Trans
@@ -266,3 +266,25 @@ async def export_excel(excel_data: ExcelData, trans: Trans):
 
     result = await asyncio.to_thread(inner)
     return StreamingResponse(result, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+@router.post("/log/{log_id}/feedback")
+async def update_feedback(session: SessionDep, log_id: int, feedback: str):
+    """Update feedback for a chat log
+    
+    Args:
+        session: Database session
+        log_id: ChatLog ID
+        feedback: Feedback value ('like' or 'dislike')
+        
+    Returns:
+        Success status
+    """
+    try:
+        update_chat_log_feedback(session, log_id, feedback)
+        return {"success": True, "message": "Feedback updated successfully"}
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )

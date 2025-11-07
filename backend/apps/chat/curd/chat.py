@@ -183,7 +183,11 @@ def get_chat_with_records(session: SessionDep, chart_id: int, current_user: Curr
                    sql_alias_log.reasoning_content.label('sql_reasoning_content'),
                    chart_alias_log.reasoning_content.label('chart_reasoning_content'),
                    analysis_alias_log.reasoning_content.label('analysis_reasoning_content'),
-                   predict_alias_log.reasoning_content.label('predict_reasoning_content')
+                   predict_alias_log.reasoning_content.label('predict_reasoning_content'),
+                   sql_alias_log.id.label('sql_log_id'),
+                   chart_alias_log.id.label('chart_log_id'),
+                   sql_alias_log.feedback.label('sql_feedback'),
+                   chart_alias_log.feedback.label('chart_feedback')
                    )
     .outerjoin(sql_alias_log, and_(sql_alias_log.pid == ChatRecord.id,
                                    sql_alias_log.type == TypeEnum.CHAT,
@@ -227,6 +231,10 @@ def get_chat_with_records(session: SessionDep, chart_id: int, current_user: Curr
                                  chart_reasoning_content=row.chart_reasoning_content,
                                  analysis_reasoning_content=row.analysis_reasoning_content,
                                  predict_reasoning_content=row.predict_reasoning_content,
+                                 sql_log_id=row.sql_log_id,
+                                 chart_log_id=row.chart_log_id,
+                                 sql_feedback=row.sql_feedback,
+                                 chart_feedback=row.chart_feedback
                                  ))
         else:
             record_list.append(
@@ -762,3 +770,27 @@ def get_old_questions(session: SessionDep, datasource: int):
     for r in result:
         records.append(r.question)
     return records
+
+
+def update_chat_log_feedback(session: SessionDep, log_id: int, feedback: str) -> bool:
+    """Update feedback for a chat log entry
+    
+    Args:
+        session: Database session
+        log_id: ChatLog ID
+        feedback: Feedback value ('like' or 'dislike')
+        
+    Returns:
+        bool: True if update successful
+    """
+    if not log_id:
+        raise Exception("Log id cannot be None")
+    
+    if feedback not in ['like', 'dislike']:
+        raise Exception("Feedback must be 'like' or 'dislike'")
+    
+    stmt = update(ChatLog).where(ChatLog.id == log_id).values(feedback=feedback)
+    session.execute(stmt)
+    session.commit()
+    
+    return True
