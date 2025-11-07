@@ -1,30 +1,27 @@
 #!/usr/bin/env python3
 """
-重新生成所有 embedding 的脚本
-用于解决向量维度不匹配的问题
+简化版重新生成所有 embedding 的脚本
+直接使用项目的数据库配置
 
 使用方法:
-python scripts/regenerate_embeddings.py
+cd /opt/sqlbot/app
+python scripts/regenerate_embeddings_simple.py
 """
-import sys
-import os
-from pathlib import Path
-
-# 添加项目根目录到 Python 路径
-backend_dir = Path(__file__).parent.parent
-sys.path.insert(0, str(backend_dir))
-
 import traceback
-from sqlalchemy import create_engine, update
+from sqlalchemy import update
 from sqlalchemy.orm import sessionmaker, scoped_session
 
 from apps.datasource.models.datasource import CoreTable, CoreDatasource
 from apps.datasource.crud.table import save_table_embedding, save_ds_embedding
 from common.core.config import settings
+from common.core.db import engine
 from common.utils.utils import SQLBotLogUtil
 
+# 创建 session_maker
+session_maker = scoped_session(sessionmaker(bind=engine))
 
-def clear_all_embeddings(session_maker):
+
+def clear_all_embeddings():
     """清空所有 embedding 数据"""
     try:
         SQLBotLogUtil.info('开始清空所有 embedding 数据...')
@@ -54,7 +51,7 @@ def clear_all_embeddings(session_maker):
         session.close()
 
 
-def regenerate_all_embeddings(session_maker):
+def regenerate_all_embeddings():
     """重新生成所有 embedding"""
     try:
         if not settings.TABLE_EMBEDDING_ENABLED:
@@ -101,22 +98,18 @@ def regenerate_all_embeddings(session_maker):
 def main():
     """主函数"""
     try:
+        print('=' * 60)
+        print('开始重新生成 embedding 任务')
+        print(f'当前使用的 embedding 模型: {settings.DEFAULT_EMBEDDING_MODEL}')
+        print('=' * 60)
+        
         SQLBotLogUtil.info('=' * 60)
         SQLBotLogUtil.info('开始重新生成 embedding 任务')
         SQLBotLogUtil.info(f'当前使用的 embedding 模型: {settings.DEFAULT_EMBEDDING_MODEL}')
         SQLBotLogUtil.info('=' * 60)
         
-        # 创建数据库连接
-        engine = create_engine(
-            str(settings.SQLALCHEMY_DATABASE_URI),
-            pool_pre_ping=True,
-            echo=False,
-        )
-        session_factory = sessionmaker(bind=engine)
-        session_maker = scoped_session(session_factory)
-        
         # 清空所有 embedding
-        table_count, ds_count = clear_all_embeddings(session_maker)
+        table_count, ds_count = clear_all_embeddings()
         
         print('\n' + '=' * 60)
         print(f'已清空 {table_count} 个表和 {ds_count} 个数据源的 embedding')
@@ -130,7 +123,7 @@ def main():
             return
         
         # 重新生成所有 embedding
-        regenerate_all_embeddings(session_maker)
+        regenerate_all_embeddings()
         
         print('\n' + '=' * 60)
         print('✓ 所有 embedding 已成功重新生成!')
@@ -142,8 +135,10 @@ def main():
         print(f'✗ 执行失败: {str(e)}')
         print('=' * 60)
         traceback.print_exc()
-        sys.exit(1)
+        return 1
+    
+    return 0
 
 
 if __name__ == '__main__':
-    main()
+    exit(main())
