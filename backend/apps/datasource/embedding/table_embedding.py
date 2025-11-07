@@ -59,10 +59,32 @@ def calc_table_embedding(tables: list[dict], question: str):
             results = [item.get('embedding') for item in _list]
 
             q_embedding = model.embed_query(question)
+            q_embedding_dim = len(q_embedding)
+            
             for index in range(len(results)):
                 item = results[index]
                 if item:
-                    _list[index]['cosine_similarity'] = cosine_similarity(q_embedding, json.loads(item))
+                    try:
+                        stored_embedding = json.loads(item)
+                        stored_dim = len(stored_embedding)
+                        
+                        # 检查向量维度是否匹配
+                        if stored_dim != q_embedding_dim:
+                            SQLBotLogUtil.warning(
+                                f"表 ID {_list[index]['id']} 的 embedding 维度不匹配: "
+                                f"存储的维度={stored_dim}, 当前模型维度={q_embedding_dim}. "
+                                f"请运行 regenerate_embeddings.py 重新生成 embedding"
+                            )
+                            # 维度不匹配时设置为 0，该表将被排到最后
+                            _list[index]['cosine_similarity'] = 0.0
+                            continue
+                        
+                        _list[index]['cosine_similarity'] = cosine_similarity(q_embedding, stored_embedding)
+                    except (json.JSONDecodeError, ValueError) as e:
+                        SQLBotLogUtil.warning(
+                            f"表 ID {_list[index]['id']} 的 embedding 数据异常: {str(e)}"
+                        )
+                        _list[index]['cosine_similarity'] = 0.0
 
             _list.sort(key=lambda x: x['cosine_similarity'], reverse=True)
             _list = _list[:settings.TABLE_EMBEDDING_COUNT]
