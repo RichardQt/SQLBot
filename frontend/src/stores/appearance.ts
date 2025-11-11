@@ -43,7 +43,7 @@ interface KeyValue {
 export const useAppearanceStore = defineStore('appearanceStore', {
   state: (): AppearanceState => {
     return {
-      themeColor: '',
+      themeColor: 'blue',
       customColor: '',
       navigateBg: '',
       navigate: '',
@@ -252,7 +252,7 @@ export const useAppearanceStore = defineStore('appearanceStore', {
       // }
       const obj = LicenseGenerator.getLicense()
       if (obj?.status !== 'valid') {
-        setCurrentColor('#1CBA90')
+        setCurrentColor('#3370ff')
         document.title = 'SQLBot'
         setLinkIcon()
         return
@@ -260,7 +260,7 @@ export const useAppearanceStore = defineStore('appearanceStore', {
       const resData = await request.get('/system/appearance/ui')
       this.loaded = true
       if (!resData?.length) {
-        setCurrentColor('#1CBA90')
+        setCurrentColor('#3370ff')
         setLinkIcon()
         return
       }

@@ -31,6 +31,7 @@
                 <Loading v-if="step.status === 'processing'" class="rotating" />
                 <Check v-else-if="step.status === 'completed'" />
                 <Close v-else-if="step.status === 'error'" />
+                <Remove v-else-if="step.status === 'skipped'" />
                 <Clock v-else />
               </el-icon>
 
@@ -102,12 +103,20 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { Loading, Check, Close, Clock, DocumentCopy, InfoFilled } from '@element-plus/icons-vue'
+import {
+  Loading,
+  Check,
+  Close,
+  Clock,
+  DocumentCopy,
+  InfoFilled,
+  Remove,
+} from '@element-plus/icons-vue'
 
 export interface Step {
   id: number
   name: string
-  status: 'pending' | 'processing' | 'completed' | 'error'
+  status: 'pending' | 'processing' | 'completed' | 'error' | 'skipped'
   progress: number
   details?: string[]
   error?: string
@@ -178,6 +187,8 @@ const getStepTagType = (status: string) => {
       return 'success'
     case 'error':
       return 'danger'
+    case 'skipped':
+      return 'warning'
     default:
       return 'info'
   }
@@ -209,6 +220,8 @@ const getStepStatusText = (status: string) => {
       return '已完成'
     case 'error':
       return '失败'
+    case 'skipped':
+      return '已跳过'
     default:
       return '未知'
   }
@@ -249,6 +262,11 @@ const getStepStatusText = (status: string) => {
 
       .step-icon {
         flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+        height: 20px;
 
         &.status-pending {
           color: var(--el-color-info);
@@ -266,6 +284,10 @@ const getStepStatusText = (status: string) => {
           color: var(--el-color-danger);
         }
 
+        &.status-skipped {
+          color: var(--el-color-warning);
+        }
+
         .rotating {
           animation: rotate 1s linear infinite;
           transform-origin: center;
@@ -276,17 +298,24 @@ const getStepStatusText = (status: string) => {
         flex: 1;
         font-size: 14px;
         font-weight: 500;
+        line-height: 20px;
+        text-align: center;
       }
 
       .step-status-tag {
-        margin-left: auto;
+        flex-shrink: 0;
+        min-width: 60px;
+        text-align: center;
       }
 
       .step-duration {
-        margin-left: 12px;
+        flex-shrink: 0;
+        min-width: 100px;
         font-size: 12px;
         color: var(--el-text-color-secondary);
         white-space: nowrap;
+        line-height: 20px;
+        text-align: left;
       }
     }
 

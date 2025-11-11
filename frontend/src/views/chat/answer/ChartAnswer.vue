@@ -9,7 +9,7 @@ import StepProgress from '@/components/StepProgress.vue'
 interface ProcessingStep {
   id: number
   name: string
-  status: 'pending' | 'processing' | 'completed' | 'error'
+  status: 'pending' | 'processing' | 'completed' | 'error' | 'skipped'
   progress: number
   details?: string[]
   error?: string
@@ -242,7 +242,60 @@ const handleStepEvent = (data: any) => {
   overallProgress.value = Math.floor((completedSteps / steps.value.length) * 100)
 
   // 检查是否全部完成
-  isCompleted.value = completedSteps === steps.value.length
+  const nonPendingSteps = steps.value.filter((s: ProcessingStep) => s.status !== 'pending').length
+  isCompleted.value = nonPendingSteps === steps.value.length
+}
+
+// 跳过所有pending状态的步骤
+const skipPendingSteps = (reason: string = '已跳过') => {
+  steps.value.forEach((step: ProcessingStep) => {
+    if (step.status === 'pending') {
+      step.status = 'skipped'
+      step.details = [reason]
+      step.endTime = Date.now()
+      step.durationMs = 0
+    }
+  })
+
+  // 重新计算进度
+  const completedSteps = steps.value.filter((s: ProcessingStep) => s.status === 'completed').length
+  overallProgress.value = Math.floor((completedSteps / steps.value.length) * 100)
+
+  // 检查是否全部完成
+  const nonPendingSteps = steps.value.filter((s: ProcessingStep) => s.status !== 'pending').length
+  isCompleted.value = nonPendingSteps === steps.value.length
+}
+
+// 标记正在处理中的步骤为失败,并跳过pending步骤
+const markProcessingAsErrorAndSkipPending = (errorMessage: string) => {
+  let hasProcessingStep = false
+
+  steps.value.forEach((step: ProcessingStep) => {
+    if (step.status === 'processing') {
+      // 将正在进行的步骤标记为失败
+      step.status = 'error'
+      step.error = errorMessage
+      step.endTime = Date.now()
+      step.durationMs = deriveDuration(step.startTime, step.endTime)
+      hasProcessingStep = true
+    } else if (step.status === 'pending') {
+      // 跳过待执行的步骤
+      step.status = 'skipped'
+      step.details = ['由于前序步骤失败,已自动跳过']
+      step.endTime = Date.now()
+      step.durationMs = 0
+    }
+  })
+
+  // 重新计算进度
+  const completedSteps = steps.value.filter((s: ProcessingStep) => s.status === 'completed').length
+  overallProgress.value = Math.floor((completedSteps / steps.value.length) * 100)
+
+  // 检查是否全部完成
+  const nonPendingSteps = steps.value.filter((s: ProcessingStep) => s.status !== 'pending').length
+  isCompleted.value = nonPendingSteps === steps.value.length
+
+  return hasProcessingStep
 }
 
 const sendMessage = async () => {
@@ -367,6 +420,8 @@ const sendMessage = async () => {
                 break
               case 'error':
                 currentRecord.error = data.content
+                // 当发生错误时,将正在进行的步骤标记为失败,并跳过所有pending的步骤
+                markProcessingAsErrorAndSkipPending(data.content || '执行失败')
                 emits('error')
                 break
               case 'datasource': {
@@ -423,6 +478,8 @@ const sendMessage = async () => {
                 if (data.chart_log_id) {
                   currentRecord.chart_log_id = data.chart_log_id
                 }
+                // 当收到finish事件时,跳过所有pending的步骤
+                skipPendingSteps('该问题不需要此步骤')
                 emits('finish', currentRecord.id)
                 break
             }
@@ -440,6 +497,8 @@ const sendMessage = async () => {
     }
     currentRecord.error = currentRecord.error + 'Error:' + error
     console.error('Error:', error)
+    // 标记正在处理的步骤为失败,并跳过pending步骤
+    markProcessingAsErrorAndSkipPending('请求处理异常')
     emits('error')
   } finally {
     _loading.value = false
@@ -462,6 +521,19 @@ function getChatData(recordId?: number) {
           }
         }
       })
+    })
+    .catch((error) => {
+      // SQL执行失败时,标记步骤5为失败
+      const step5 = steps.value.find((s: ProcessingStep) => s.id === 5)
+      if (step5 && step5.status === 'processing') {
+        step5.status = 'error'
+        step5.error = error?.message || 'SQL执行失败'
+        step5.endTime = Date.now()
+        step5.durationMs = deriveDuration(step5.startTime, step5.endTime)
+      }
+      // 跳过后续pending步骤
+      skipPendingSteps('由于SQL执行失败,后续步骤已自动跳过')
+      console.error('获取查询数据失败:', error)
     })
     .finally(() => {
       emits('scrollBottom')

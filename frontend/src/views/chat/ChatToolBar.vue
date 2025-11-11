@@ -112,7 +112,7 @@ const handleFeedback = async (type: 'like' | 'dislike', logType: 'sql' | 'chart'
 </template>
 
 <style scoped lang="less">
-.tool-container {
+.tool-container {  
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -149,6 +149,14 @@ const handleFeedback = async (type: 'like' | 'dislike', logType: 'sql' | 'chart'
         color: rgba(100, 106, 115, 1);
         padding: 4px 8px;
         min-height: unset;
+        transition: none !important;
+        transform: translateZ(0);
+        backface-visibility: hidden;
+
+        &:focus,
+        &:focus-visible {
+          outline: none !important;
+        }
 
         &:hover {
           background: rgba(31, 35, 41, 0.1);

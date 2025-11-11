@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ChatInfo, type ChatMessage } from '@/api/chat.ts'
-import logo_fold from '@/assets/LOGO-fold.svg'
+import logo_fold from '@/assets/logo/sifa1.svg'
 import { useAppearanceStoreWithOut } from '@/stores/appearance'
 import custom_small from '@/assets/svg/logo-custom_small.svg'
 

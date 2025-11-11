@@ -71,7 +71,7 @@ const defaultSqlBotForm = reactive<SqlBotForm>({
   float_icon_drag: false,
   welcome: t('embedded.i_am_sqlbot'),
   welcome_desc: t('embedded.data_analysis_now'),
-  theme: '#1CBA90',
+  theme: '#3370ff',
   header_font_color: '#1F2329',
   logo: '',
   float_icon: '',
