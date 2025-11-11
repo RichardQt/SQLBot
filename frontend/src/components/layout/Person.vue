@@ -2,14 +2,10 @@
 import { ref, computed } from 'vue'
 import Default_avatar_custom from '@/assets/img/Default-avatar.svg'
 import icon_admin_outlined from '@/assets/svg/icon_admin_outlined.svg'
-import icon_info_outlined_1 from '@/assets/svg/icon_info_outlined_1.svg'
-import { useAppearanceStoreWithOut } from '@/stores/appearance'
-import icon_maybe_outlined from '@/assets/svg/icon-maybe_outlined.svg'
 import icon_key_outlined from '@/assets/svg/icon-key_outlined.svg'
 import icon_translate_outlined from '@/assets/svg/icon_translate_outlined.svg'
 import icon_logout_outlined from '@/assets/svg/icon_logout_outlined.svg'
 import icon_right_outlined from '@/assets/svg/icon_right_outlined.svg'
-import AboutDialog from '@/components/about/index.vue'
 import icon_done_outlined from '@/assets/svg/icon_done_outlined.svg'
 import { useI18n } from 'vue-i18n'
 import PwdForm from './PwdForm.vue'
@@ -18,7 +14,6 @@ import { useUserStore } from '@/stores/user'
 import { userApi } from '@/api/auth'
 
 const router = useRouter()
-const appearanceStore = useAppearanceStoreWithOut()
 const userStore = useUserStore()
 const pwdFormRef = ref()
 const { t, locale } = useI18n()
@@ -32,7 +27,6 @@ const account = computed(() => userStore.getAccount)
 const currentLanguage = computed(() => userStore.getLanguage)
 const isAdmin = computed(() => userStore.isAdmin)
 const dialogVisible = ref(false)
-const aboutRef = ref()
 const languageList = computed(() => [
   {
     name: 'English',
@@ -65,10 +59,6 @@ const changeLanguage = (lang: string) => {
   })
 }
 
-const openHelp = () => {
-  window.open(appearanceStore.getHelp || 'https://dataease.cn/sqlbot/', '_blank')
-}
-
 const openPwd = () => {
   dialogVisible.value = true
 }
@@ -76,9 +66,6 @@ const closePwd = () => {
   dialogVisible.value = false
 }
 
-const toAbout = () => {
-  aboutRef.value?.open()
-}
 const savePwdHandler = () => {
   pwdFormRef.value?.submit()
 }
@@ -151,18 +138,6 @@ const logout = () => {
             </div>
           </div>
         </el-popover>
-        <div v-if="appearanceStore.getShowAbout" class="popover-item" @click="toAbout">
-          <el-icon size="16">
-            <icon_info_outlined_1></icon_info_outlined_1>
-          </el-icon>
-          <div class="datasource-name">{{ $t('about.title') }}</div>
-        </div>
-        <div v-if="appearanceStore.getShowDoc" class="popover-item" @click="openHelp">
-          <el-icon size="16">
-            <icon_maybe_outlined></icon_maybe_outlined>
-          </el-icon>
-          <div class="datasource-name">{{ $t('common.help') }}</div>
-        </div>
         <div style="height: 4px; width: 100%"></div>
         <div class="popover-item mr4" @click="logout">
           <el-icon size="16">
@@ -183,7 +158,6 @@ const logout = () => {
       </div>
     </template>
   </el-dialog>
-  <AboutDialog ref="aboutRef" />
 </template>
 
 <style lang="less" scoped>

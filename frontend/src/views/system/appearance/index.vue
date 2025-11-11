@@ -150,12 +150,6 @@
         <div class="login">
           <div class="platform-login">{{ t('system.platform_settings') }}</div>
           <div class="page-preview">
-            <div class="title">
-              <span class="left">{{ t('system.page_preview') }}</span>
-              <el-button text @click="resetTopForm(true)">{{
-                t('system.restore_default')
-              }}</el-button>
-            </div>
             <div class="page-setting">
               <div class="page-content">
                 <!-- <div class="navigate-preview" :style="{'height': `${navigateHeight}px`}"> -->
@@ -168,11 +162,7 @@
                       <span style="margin-left: 8px">{{ loginForm.name }}</span>
                     </div>
                     <div class="bottom-sql">
-                      <Person
-                        :is-blue="isBlue"
-                        :show-about="topForm.showAbout === '0'"
-                        :show-doc="topForm.showDoc === '0'"
-                      ></Person>
+                      <Person :is-blue="isBlue"></Person>
                       <el-icon size="20" class="fold">
                         <icon_side_fold_outlined></icon_side_fold_outlined>
                       </el-icon>
@@ -186,29 +176,9 @@
                 </div>
               </div>
               <div class="config-list">
-                <el-checkbox
-                  v-model="topForm.showDoc"
-                  true-value="0"
-                  false-value="1"
-                  :label="$t('system.help_documentation')"
-                />
-                <div class="doc-input">
-                  <el-input
-                    v-model="topForm.help"
-                    style="width: 100%"
-                    :placeholder="
-                      $t('datasource.please_enter') +
-                      $t('common.empty') +
-                      $t('system.help_documentation')
-                    "
-                  />
+                <div style="color: #8f959e; padding: 16px; text-align: center">
+                  暂无其他平台设置
                 </div>
-                <el-checkbox
-                  v-model="topForm.showAbout"
-                  true-value="0"
-                  false-value="1"
-                  :label="$t('system.show_about')"
-                />
               </div>
             </div>
           </div>
@@ -316,18 +286,6 @@ const rules = reactive<FormRules>({
   ],
 })
 
-const defaultTopForm = {
-  help: 'https://dataease.cn/sqlbot/v1/',
-  showDoc: '0',
-  showAbout: '0',
-}
-
-const topForm = reactive<{
-  help: string
-  showDoc: string
-  showAbout: string
-}>(cloneDeep(defaultTopForm))
-
 const isBlue = computed(() => {
   return themeColor.value === 'blue'
 })
@@ -354,7 +312,6 @@ const configList = [
 
 const giveUp = () => {
   resetLoginForm(false)
-  resetTopForm(false)
   resetMobileForm(false)
   init()
 }
@@ -392,10 +349,6 @@ const buildParam = () => {
     } else {
       addChangeArray(key, item!)
     }
-  }
-  for (const key in topForm) {
-    const item = topForm[key as keyof typeof topForm]
-    addChangeArray(key, item)
   }
   const formData = new FormData()
   if (fileList.value.length) {
@@ -439,8 +392,6 @@ const init = () => {
           navigate.value = pval
         } else if (Object.prototype.hasOwnProperty.call(loginForm, pkey)) {
           loginForm[pkey as keyof typeof loginForm] = pval
-        } else if (Object.prototype.hasOwnProperty.call(topForm, pkey)) {
-          topForm[pkey as keyof typeof topForm] = pval
         } else if (pkey === 'mobileLogin') {
           mobileLogin.value = pval
         } else if (pkey === 'mobileLoginBg') {
@@ -513,16 +464,6 @@ const resetLoginForm = (reset2Default?: boolean) => {
     web.value = ''
     login.value = ''
     bg.value = ''
-  }
-}
-const resetTopForm = (reset2Default?: boolean) => {
-  for (const key in topForm) {
-    topForm[key as keyof typeof topForm] = defaultTopForm[key as keyof typeof defaultTopForm]
-  }
-  clearFiles(['navigate'])
-  if (reset2Default) {
-    addChangeArray('navigate', '', 'file')
-    navigate.value = ''
   }
 }
 

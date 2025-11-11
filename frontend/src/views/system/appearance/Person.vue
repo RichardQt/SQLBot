@@ -2,8 +2,6 @@
 import { computed } from 'vue'
 import Default_avatar_custom from '@/assets/img/Default-avatar.svg'
 import icon_admin_outlined from '@/assets/svg/icon_admin_outlined.svg'
-import icon_info_outlined_1 from '@/assets/svg/icon_info_outlined_1.svg'
-import icon_maybe_outlined from '@/assets/svg/icon-maybe_outlined.svg'
 import icon_key_outlined from '@/assets/svg/icon-key_outlined.svg'
 import icon_translate_outlined from '@/assets/svg/icon_translate_outlined.svg'
 import icon_logout_outlined from '@/assets/svg/icon_logout_outlined.svg'
@@ -11,8 +9,6 @@ import icon_right_outlined from '@/assets/svg/icon_right_outlined.svg'
 import { useUserStore } from '@/stores/user'
 
 defineProps({
-  showDoc: { type: [Boolean], required: true },
-  showAbout: { type: [Boolean], required: true },
   isBlue: { type: [Boolean], required: true },
 })
 const userStore = useUserStore()
@@ -58,18 +54,6 @@ const account = computed(() => userStore.getAccount)
             <el-icon class="right" size="16">
               <icon_right_outlined></icon_right_outlined>
             </el-icon>
-          </div>
-          <div v-if="showAbout" class="popover-item">
-            <el-icon size="16">
-              <icon_info_outlined_1></icon_info_outlined_1>
-            </el-icon>
-            <div class="datasource-name">{{ $t('about.title') }}</div>
-          </div>
-          <div v-if="showDoc" class="popover-item">
-            <el-icon size="16">
-              <icon_maybe_outlined></icon_maybe_outlined>
-            </el-icon>
-            <div class="datasource-name">{{ $t('common.help') }}</div>
           </div>
           <div class="popover-item mr4">
             <el-icon size="16">

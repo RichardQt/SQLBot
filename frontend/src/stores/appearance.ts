@@ -16,11 +16,8 @@ interface AppearanceState {
   navigate?: string
   mobileLogin?: string
   mobileLoginBg?: string
-  help?: string
   showAi?: string
   showCopilot?: string
-  showDoc?: string
-  showAbout?: string
   bg?: string
   login?: string
   slogan?: string
@@ -49,12 +46,9 @@ export const useAppearanceStore = defineStore('appearanceStore', {
       navigate: '',
       mobileLogin: '',
       mobileLoginBg: '',
-      help: '',
-      showDoc: '0',
       showSlogan: '0',
       showAi: '0',
       showCopilot: '0',
-      showAbout: '0',
       bg: '',
       login: '',
       slogan: '',
@@ -86,9 +80,6 @@ export const useAppearanceStore = defineStore('appearanceStore', {
         return baseUrl + this.mobileLoginBg
       }
       return null!
-    },
-    getHelp(): string {
-      return this.help!
     },
     getThemeColor(): string {
       return this.themeColor!
@@ -150,12 +141,6 @@ export const useAppearanceStore = defineStore('appearanceStore', {
     getShowSlogan(): boolean {
       return isBtnShow(this.showSlogan!)
     },
-    getShowDoc(): boolean {
-      return isBtnShow(this.showDoc!)
-    },
-    getShowAbout(): boolean {
-      return isBtnShow(this.showAbout!)
-    },
   },
   actions: {
     setNavigate(data: string) {
@@ -191,9 +176,6 @@ export const useAppearanceStore = defineStore('appearanceStore', {
     // },
     setMobileLoginBg(data: string) {
       this.mobileLoginBg = data
-    },
-    setHelp(data: string) {
-      this.help = data
     },
     setNavigateBg(data: string) {
       this.navigateBg = data
@@ -274,9 +256,6 @@ export const useAppearanceStore = defineStore('appearanceStore', {
       })
 
       this.navigate = data.navigate
-      this.help = data.help
-      this.showDoc = data.showDoc
-      this.showAbout = data.showAbout
       this.navigateBg = data.navigateBg
       this.themeColor = data.themeColor
       this.customColor = data.customColor
