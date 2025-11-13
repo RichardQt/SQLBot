@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 from typing import Any
+import uuid
 
 import jwt
 from passlib.context import CryptContext
@@ -13,10 +14,27 @@ ALGORITHM = "HS256"
 
 
 def create_access_token(data: dict | Any, expires_delta: timedelta) -> str:
+    """
+    创建访问令牌
+    
+    Args:
+        data: 令牌数据
+        expires_delta: 过期时间
+        
+    Returns:
+        str: JWT令牌
+    """
     to_encode = data.copy()
     expire = datetime.now(timezone.utc) + expires_delta
-    to_encode.update({"exp": expire})
-    # to_encode = {"exp": expire, "account": str(subject)}
+    
+    # 添加标准JWT声明
+    to_encode.update({
+        "exp": expire,  # 过期时间
+        "iat": datetime.now(timezone.utc),  # 签发时间
+        "jti": str(uuid.uuid4()),  # JWT ID，用于防止重放攻击
+        "iss": "SQLBot",  # 签发者
+    })
+    
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 

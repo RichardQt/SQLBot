@@ -20,9 +20,10 @@ router = APIRouter(tags=["user"], prefix="/user")
 async def user_info(current_user: CurrentUser):
     return current_user
 
-@router.get("/defaultPwd")
-async def default_pwd() -> str:
-    return settings.DEFAULT_PWD
+# 安全修复：删除暴露默认密码的端点，防止未授权访问
+# @router.get("/defaultPwd")
+# async def default_pwd() -> str:
+#     return settings.DEFAULT_PWD
 
 @router.get("/pager/{pageNum}/{pageSize}", response_model=PaginatedResponse[UserGrid])
 async def pager(

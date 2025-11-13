@@ -23,7 +23,9 @@ services:
       # MCP settings (已禁用)
       # SERVER_IMAGE_HOST: http://YOUR_SERVE_IP:MCP_PORT/images/
       # Auth & Security
-      SECRET_KEY: y5txe1mRmS_JpOrUzFzHEu-kIQn3lf7ll0AOv9DQh0s
+      # 安全警告: 部署前必须修改SECRET_KEY为唯一随机值！
+      # 生成方法: python -c "import secrets; print(secrets.token_urlsafe(32))"
+      SECRET_KEY: VCzmavK0pvnXJ89W6_IENxvRaFa1oGqEnsvomGTTD2Y
       # CORS settings
       BACKEND_CORS_ORIGINS: "http://localhost,http://localhost:5173,http://localhost:808,http://localhost:8000,https://localhost,https://localhost:5173"
       # Logging

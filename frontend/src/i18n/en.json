@@ -421,6 +421,8 @@
     "confirm_password": "Confirm password",
     "old_password": "Old password",
     "title": "User management",
+    "reset_password_confirm": "Reset Password Confirmation",
+    "reset_password_tip": "Are you sure you want to reset this user's password to the default password? After resetting, the user will need to contact the administrator to obtain the new password.",
     "upgrade_pwd": {
       "title": "Change password",
       "old_pwd": "Old password",

@@ -33,12 +33,39 @@ def generate_password_reset_token(email: str) -> str:
 
 
 def verify_password_reset_token(token: str) -> str | None:
+    """
+    验证密码重置令牌
+    
+    Args:
+        token: JWT令牌
+        
+    Returns:
+        str | None: 用户邮箱或None
+    """
     try:
         decoded_token = jwt.decode(
-            token, settings.SECRET_KEY, algorithms=[security.ALGORITHM]
+            token, 
+            settings.SECRET_KEY, 
+            algorithms=[security.ALGORITHM],
+            options={
+                "verify_signature": True,
+                "verify_exp": True,
+                "verify_nbf": True,
+                "require": ["exp", "sub"]
+            }
         )
+        
+        # 验证签发者（如果存在）
+        if "iss" in decoded_token and decoded_token["iss"] != "SQLBot":
+            SQLBotLogUtil.warning(f"令牌签发者不匹配: {decoded_token.get('iss')}")
+            return None
+            
         return str(decoded_token["sub"])
-    except InvalidTokenError:
+    except jwt.ExpiredSignatureError:
+        SQLBotLogUtil.warning("令牌已过期")
+        return None
+    except jwt.InvalidTokenError as e:
+        SQLBotLogUtil.warning(f"令牌验证失败: {str(e)}")
         return None
 
 

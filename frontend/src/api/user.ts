@@ -26,5 +26,6 @@ export const userApi = {
   get: (key: string) => request.get(`/user/${key}`),
   pwd: (id: any) => request.patch(`/user/pwd/${id}`),
   status: (data: any) => request.patch('/user/status', data),
-  defaultPwd: () => request.get('/user/defaultPwd'),
+  // 安全修复：删除获取默认密码的API调用
+  // defaultPwd: () => request.get('/user/defaultPwd'),
 }

@@ -75,6 +75,25 @@ function prepare_sqlbot_run_base() {
     log_content "复制安装文件到运行目录"
     cp -r ./sqlbot/* ${SQLBOT_RUN_BASE}/
 
+    # 生成随机 SECRET_KEY（如果未设置或使用默认值）
+    if [ -z "${SQLBOT_SECRET_KEY}" ] || [ "${SQLBOT_SECRET_KEY}" = "PLEASE_GENERATE_RANDOM_KEY_DURING_INSTALLATION" ] || [ "${SQLBOT_SECRET_KEY}" = "y5txe1mRmS_JpOrUzFzHEu-kIQn3lf7ll0AOv9DQh0s" ]; then
+        log_content "生成随机 SECRET_KEY"
+        # 使用 Python 生成安全的随机密钥
+        if which python3 >/dev/null 2>&1; then
+            SQLBOT_SECRET_KEY=$(python3 -c "import secrets; print(secrets.token_urlsafe(32))")
+            log_content "已生成新的 SECRET_KEY"
+        elif which python >/dev/null 2>&1; then
+            SQLBOT_SECRET_KEY=$(python -c "import secrets; print(secrets.token_urlsafe(32))")
+            log_content "已生成新的 SECRET_KEY"
+        else
+            log_content "警告: 无法找到 Python，使用 openssl 生成密钥"
+            SQLBOT_SECRET_KEY=$(openssl rand -base64 32 | tr -d "=+/" | cut -c1-43)
+        fi
+        export SQLBOT_SECRET_KEY
+    else
+        log_content "使用配置文件中的 SECRET_KEY"
+    fi
+
     cd ${SQLBOT_RUN_BASE}
     env | grep SQLBOT_ >.env
 

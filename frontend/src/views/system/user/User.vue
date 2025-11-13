@@ -154,13 +154,10 @@
                         <icon_warning_filled class="svg-icon" />
                       </el-icon>
                     </span>
-                    <span class="header-span">{{ t('datasource.the_original_one') }}</span>
+                    <span class="header-span">{{ t('user.reset_password_confirm') }}</span>
                   </div>
                   <div class="confirm-content">
-                    <span>{{ defaultPwd }}</span>
-                    <el-button style="margin-left: 4px" text @click="copyText">{{
-                      t('datasource.copy')
-                    }}</el-button>
+                    <span>{{ t('user.reset_password_tip') }}</span>
                   </div>
                   <div class="confirm-foot">
                     <el-button secondary @click="closeResetInfo(scope.row)">{{
@@ -382,12 +379,12 @@ import { workspaceList } from '@/api/workspace'
 import { formatTimestamp } from '@/utils/date'
 import { ClickOutside as vClickOutside } from 'element-plus-secondary'
 import icon_warning_filled from '@/assets/svg/icon_warning_filled.svg'
-import { useClipboard } from '@vueuse/core'
-
-const { copy } = useClipboard({ legacy: true })
+// 安全修复：移除 useClipboard，因为不再需要复制默认密码
+// import { useClipboard } from '@vueuse/core'
 
 const { t } = useI18n()
-const defaultPwd = ref('SQLBot@123456')
+// 安全修复：移除默认密码显示，防止密码泄露
+// const defaultPwd = ref('SQLBot@123456')
 const keyword = ref('')
 const dialogFormVisible = ref(false)
 const termFormRef = ref()
@@ -509,16 +506,6 @@ const closeResetInfo = (row: any) => {
 }
 const setPopoverRef = (el: any, row: any) => {
   row.popoverRef = el
-}
-
-const copyText = () => {
-  copy(defaultPwd.value)
-    .then(function () {
-      ElMessage.success(t('embedded.copy_successful'))
-    })
-    .catch(function () {
-      ElMessage.error(t('embedded.copy_failed'))
-    })
 }
 
 const setButtonRef = (el: any, row: any) => {
@@ -794,20 +781,14 @@ const formatSpaceName = (row_oid_list: Array<any>) => {
   })
   return row_oid_list.map((id: any) => wsMap[id]).join(',')
 }
-const loadDefaultPwd = () => {
-  userApi.defaultPwd().then((res) => {
-    if (res) {
-      defaultPwd.value = res
-    }
-  })
-}
+
 onMounted(() => {
   workspaceList().then((res) => {
     options.value = res || []
     filterOption.value[2].option = [...options.value]
   })
   search()
-  loadDefaultPwd()
+  // 安全修复：移除加载默认密码的调用
 })
 </script>
 

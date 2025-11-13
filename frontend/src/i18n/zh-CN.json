@@ -421,6 +421,8 @@
     "confirm_password": "确认密码",
     "old_password": "旧密码",
     "title": "用户管理",
+    "reset_password_confirm": "重置密码确认",
+    "reset_password_tip": "确认要将该用户的密码重置为默认密码吗？重置后，用户需要联系管理员获取新密码。",
     "upgrade_pwd": {
       "title": "修改密码",
       "old_pwd": "旧密码",

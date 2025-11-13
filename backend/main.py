@@ -18,6 +18,7 @@ from apps.system.crud.aimodel_manage import async_model_info
 from apps.system.crud.assistant import init_dynamic_cors
 from apps.system.middleware.auth import TokenMiddleware
 from common.core.config import settings
+from common.core.security_check import enforce_security_check
 from common.core.response_middleware import ResponseMiddleware, exception_handler
 from common.core.sqlbot_cache import init_sqlbot_cache
 from common.utils.embedding_threads import fill_empty_terminology_embeddings, fill_empty_data_training_embeddings
@@ -63,6 +64,10 @@ def preload_embedding_model():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # 首先进行安全检查
+    SQLBotLogUtil.info("🔒 执行安全检查...")
+    enforce_security_check(settings.SECRET_KEY, strict_mode=True)
+    
     run_migrations()
     init_sqlbot_cache()
     init_dynamic_cors(app)

@@ -421,6 +421,8 @@
     "confirm_password": "비밀번호 확인",
     "old_password": "기존 비밀번호",
     "title": "사용자 관리",
+    "reset_password_confirm": "비밀번호 재설정 확인",
+    "reset_password_tip": "이 사용자의 비밀번호를 기본 비밀번호로 재설정하시겠습니까? 재설정 후 사용자는 관리자에게 문의하여 새 비밀번호를 받아야 합니다.",
     "upgrade_pwd": {
       "title": "비밀번호 변경",
       "old_pwd": "기존 비밀번호",
