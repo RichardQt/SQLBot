@@ -1,10 +1,10 @@
 <script lang="ts" setup>
 import { ref, computed, onUnmounted } from 'vue'
 import Menu from './Menu.vue'
-import custom_small from '@/assets/svg/logo-custom_small.svg'
+import custom_small from '@/assets/logo/sifaju.svg'
 import Workspace from './Workspace.vue'
 import Person from './Person.vue'
-import LOGO_fold from '@/assets/LOGO-fold.svg'
+import LOGO_fold from '@/assets/logo/sifaju.svg'
 import icon_moments_categories_outlined from '@/assets/svg/icon_moments-categories_outlined.svg'
 import icon_side_fold_outlined from '@/assets/svg/icon_side-fold_outlined.svg'
 import icon_side_expand_outlined from '@/assets/svg/icon_side-expand_outlined.svg'
