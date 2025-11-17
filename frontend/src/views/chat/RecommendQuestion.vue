@@ -153,8 +153,14 @@ defineExpose({ getRecommendQuestions, id: () => props.recordId, stop })
 
 <template>
   <div v-if="computedQuestions.length > 0 || loading" class="recommend-questions">
-    <div v-if="firstChat" style="margin-bottom: 8px">{{ t('qa.guess_u_ask') }}</div>
-    <div v-else class="continue-ask">{{ t('qa.continue_to_ask') }}</div>
+    <div v-if="firstChat" class="section-title first-chat">
+      <span>{{ t('qa.guess_u_ask') }}</span>
+      <span class="ai-disclaimer"> AI生成内容仅供参考，请结合实际情况判断使用。</span>
+    </div>
+    <div v-else class="section-title continue-ask">
+      <span>{{ t('qa.continue_to_ask') }}</span>
+      <span class="ai-disclaimer"> AI生成内容仅供参考，请结合实际情况判断使用。</span>
+    </div>
     <div v-if="loading">
       <el-button style="min-width: unset" type="primary" link loading />
     </div>
@@ -180,6 +186,22 @@ defineExpose({ getRecommendQuestions, id: () => props.recordId, stop })
   display: flex;
   flex-direction: column;
   gap: 4px;
+
+  .section-title {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .section-title.first-chat {
+    margin-bottom: 8px;
+  }
+
+  .ai-disclaimer {
+    color: rgba(147, 152, 159, 1);
+    font-size: 12px;
+    font-weight: 400;
+  }
 
   .continue-ask {
     color: rgba(100, 106, 115, 1);

@@ -1,5 +1,5 @@
 import datetime
-from typing import List
+from typing import List, Any
 
 import orjson
 import sqlparse
@@ -95,18 +95,36 @@ def format_json_data(origin_data: dict):
     return result
 
 
-def format_json_list_data(origin_data: list[dict]):
+def _normalize_row_item(item: Any) -> dict:
+    """确保每一行都是字典，避免前端处理不同结构时报错"""
+    if isinstance(item, dict):
+        return item
+    if isinstance(item, (list, tuple)):
+        return {f'value_{idx}': value for idx, value in enumerate(item)}
+    if isinstance(item, (int, float, bool)) or item is None:
+        return {'value': item}
+    return {'message': str(item)}
+
+
+def format_json_list_data(origin_data: Any):
     data = []
-    for _data in origin_data if origin_data else []:
+    if isinstance(origin_data, dict):
+        iterable = [origin_data] if origin_data else []
+    elif isinstance(origin_data, (list, tuple)):
+        iterable = list(origin_data)
+    elif origin_data is None:
+        iterable = []
+    else:
+        iterable = [origin_data]
+
+    for _data in iterable:
+        normalized = _normalize_row_item(_data)
         _row = {}
-        for key, value in _data.items():
+        for key, value in normalized.items():
             if value is not None:
-                # 检查是否为数字且需要特殊处理
                 if isinstance(value, (int, float)):
-                    # 整数且超过15位 → 转字符串并标记为文本列
                     if isinstance(value, int) and len(str(abs(value))) > 15:
                         value = str(value)
-                    # 小数且超过15位有效数字 → 转字符串并标记为文本列
                     elif isinstance(value, float):
                         decimal_str = format(value, '.16f').rstrip('0').rstrip('.')
                         if len(decimal_str) > 15:

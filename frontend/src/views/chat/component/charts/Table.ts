@@ -1,6 +1,27 @@
 import { BaseChart, type ChartAxis, type ChartData } from '@/views/chat/component/BaseChart.ts'
-import { TableSheet, type S2Options, type S2DataConfig, type S2MountContainer } from '@antv/s2'
+import {
+  TableSheet,
+  type S2Options,
+  type S2DataConfig,
+  type S2MountContainer,
+  type ThemeCfg,
+} from '@antv/s2'
 import { debounce } from 'lodash-es'
+
+const CENTER_ALIGN_THEME: ThemeCfg = {
+  theme: {
+    colCell: {
+      text: {
+        textAlign: 'center',
+      },
+    },
+    dataCell: {
+      text: {
+        textAlign: 'center',
+      },
+    },
+  },
+}
 
 export class Table extends BaseChart {
   table?: TableSheet = undefined
@@ -63,6 +84,7 @@ export class Table extends BaseChart {
 
     if (this.container) {
       this.table = new TableSheet(this.container, s2DataConfig, s2Options)
+      this.table.setThemeCfg(CENTER_ALIGN_THEME)
     }
   }
 

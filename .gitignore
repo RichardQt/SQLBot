@@ -193,3 +193,10 @@ test.py
 
 
 !/.venv/
+.claude/*
+.claude/context-summary-data-predict.md
+.claude/operations-log.md
+.github/instructions/rules.instructions.md
+*.md
+backend/docs/text2sql-technical-implementation.md
+.github/instructions/rules.instructions.md
