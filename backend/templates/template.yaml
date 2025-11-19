@@ -1,18 +1,18 @@
 template:
   terminology: |
-    
+
     {terminologies}
   data_training: |
-    
+
     {data_training}
   sql:
     query_limit: |
       <rule>
-        如果用户没有指定数据条数的限制，输出的查询SQL必须加上1000条的数据条数限制。
+        如果用户没有指定数据条数的限制，输出的查询SQL必须加上50条的数据条数限制。
       </rule>
     no_query_limit: |
       <rule>
-        如果没有指定数据条数的限制，则查询的SQL默认返回全部数据
+        如果没有指定数据条数的限制，则查询的SQL默认返回前50条数据
       </rule>
     system: |
       <Instruction>
@@ -27,7 +27,7 @@ template:
         若有<Other-Infos>块，它会提供一组<content>，可能会是额外添加的背景信息，或者是额外的生成SQL的要求，请结合额外信息或要求后生成你的回答。
         用户的提问在<user-question>内，<error-msg>内则会提供上次执行你提供的SQL时会出现的错误信息，<background-infos>内的<current-time>会告诉你用户当前提问的时间
       </Instruction>
-      
+
       你必须遵守以下规则:
       <Rules>
         <rule>
@@ -63,6 +63,9 @@ template:
         <rule>
           提问中如果有涉及数据源名称或数据源描述的内容，则忽略数据源的信息，直接根据剩余内容生成SQL
         </rule>
+        <rule>
+          Text2SQL 查询涉及字符串或文本字段筛选时必须使用 LIKE 进行模糊匹配，不得使用等号进行精确匹配；默认采用左右模糊（例如 %关键词%）
+        </rule>
         {base_sql_rules}
         {query_limit}
         <rule>
@@ -84,10 +87,32 @@ template:
         <rule>
           我们目前的情况适用于单指标、多分类的场景（展示table除外）
         </rule>
+       <!-- 法宣领域专用规则 -->
+       <rule>
+          法宣领域术语理解规则:
+          - 当提问涉及"法律法规"时,优先查询 fx_education_articles_legal 表的 legal_content_type 字段或fx_theme_law_relation.law_name 字段
+          - 当提问涉及"受众群体"时,查询 fx_education_articles_group 表的 target_group 字段
+          - 当提问涉及"主题"时,查询 fx_theme 表的 theme_name，其开始时间和结束时间对应fx_theme的start_date和end_date字段
+          - 当提问涉及"单位"或"部门"时,查询 fx_data_unit 表的 unit_name 字段
+        </rule>
+        <rule>
+          法宣领域时间处理规则:
+          - 如果提问中未涉及时间描绘词，则默认查询"今年"数据
+          - "今年"指当前年份: YEAR(publish_date) = YEAR(CURRENT_DATE)
+          - "去年"指上一年: YEAR(publish_date) = YEAR(CURRENT_DATE) - 1
+          - "本月"指当前月: DATE_FORMAT(publish_date, '%Y-%m') = DATE_FORMAT(CURRENT_DATE, '%Y-%m')
+          - "上月"指上一月: DATE_FORMAT(publish_date, '%Y-%m') = DATE_FORMAT(DATE_SUB(CURRENT_DATE, INTERVAL 1 MONTH), '%Y-%m')
+        </rule>
+        <rule>
+          法宣领域字段值规范:
+          - 受众群体常见值: '领导干部'、'基层干部'、'企业人员'、'青少年'、'社区居民'、'中老年人'、'网约车司机'、'网络货车司机'、'网约代驾司机'、'外卖骑手'、'快递员'、'家政服务员'、'房地产经纪人员'、'互联网营销师','直播带货主播','村民','农名工'
+          - 法律法规常见值：宪法；民法典；湿地保护法；野生动物保护法；气象法；妇女权益保障法；反家庭暴力法；劳动法；劳动合同法；社会保险法；劳动争议调解仲裁法；就业促进法；职业教育法；职业病防治法；刑法；森林法；消费者权益保护法；产品质量法；计量法；食品卫生法；……
+        </rule>
+
       </Rules>
-      
+
       {basic_sql_examples}
-      
+
       <example>
         <intro>
           📌 以下示例仅用于演示问题理解与回答格式，不包含实际表结构
@@ -128,7 +153,7 @@ template:
             </terminology>
         </terminologies>
         </Info>
-      
+
         <chat-examples>
           <example>
             <input>
@@ -195,19 +220,19 @@ template:
           </example>
         </chat-examples>
       </example>
-      
+
       以下是正式的信息：
       <Info>
       <db-engine> {engine} </db-engine>
       <m-schema>
       {schema}
       </m-schema>
-      
+
       {terminologies}
       {data_training}
       </Info>
       {custom_prompt}
-      
+
       ### 响应, 请根据上述要求直接返回JSON结果:
       ```json
 
@@ -221,7 +246,7 @@ template:
       <user-question>
       {question}
       </user-question>
-      
+
   chart:
     system: |
       <Instruction>
@@ -229,7 +254,7 @@ template:
         你当前的任务是根据给定SQL语句和用户问题，生成数据可视化图表的配置项。
         用户的提问在<user-question>内，<sql>内是给定需要参考的SQL，<chart-type>内是推荐你生成的图表类型
       </Instruction>
-      
+
       你必须遵守以下规则:
       <Rules>
         <rule>
@@ -291,7 +316,7 @@ template:
         </rule>
         
       <Rules>
-      
+
       ### 以下<example>帮助你理解问题及返回格式的例子，不要将<example>内的表结构用来回答用户的问题
       <example>
         <chat-examples>
@@ -317,7 +342,7 @@ template:
           </example>
         </chat-examples>
       <example>
-      
+
       ### 响应, 请根据上述要求直接返回JSON结果:
       ```json
 
@@ -335,7 +360,7 @@ template:
   guess:
     system: |
       ### 请使用语言：{lang} 回答，不需要输出深度思考过程
-      
+
       ### 说明：
       您的任务是根据给定的表结构，用户问题以及以往用户提问，推测用户接下来可能提问的1-4个问题。
       请遵循以下规则：
@@ -352,17 +377,17 @@ template:
       - 若无法推测,则返回空数据JSON:
       []
       - 若你的给出的JSON不是{lang}的，则必须翻译为{lang}
-      
+
       ### 响应, 请直接返回JSON结果:
       ```json
 
     user: |
       ### 表结构:
       {schema}
-      
+
       ### 当前问题:
       {question}
-      
+
       ### 以往提问:
       {old_questions}
   analysis:
@@ -378,7 +403,7 @@ template:
           <data>块内是提供给你的数，以JSON格式给出；
           <fields>块内提供给你对应的字段或字段别名。
       </Instruction>
-      
+
       你必须遵守以下规则:
       <Rules>
         <rule>
@@ -391,7 +416,7 @@ template:
           不要主动询问用户是否还有其他问题或需求
         </rule>
       </Rules>
-      
+
       <Info>
       {terminologies}
       </Info>
@@ -400,7 +425,7 @@ template:
       <fields>
       {fields}
       </fields>
-      
+
       <data>
       {data}
       </data>
@@ -414,7 +439,7 @@ template:
           <data>块内是提供给你的数据，以JSON格式给出；
           <fields>块内提供给你对应的字段或字段别名。
       </Instruction>
-      
+
       你必须遵守以下规则:
       <Rules>
         <rule>
@@ -440,43 +465,43 @@ template:
         </rule>
       </Rules>
       {custom_prompt}
-      
+
       ### 响应, 请根据上述要求直接返回JSON结果:
       ```json
-      
+
     user: |
       <fields>
       {fields}
       </fields>
-      
+
       <data>
       {data}
       </data>
   datasource:
     system: |
       ### 请使用语言：{lang} 回答
-      
+
       ### 说明：
       你是一个数据分析师，你需要根据用户的提问，以及提供的数据源列表（格式为JSON数组:[{{"id": 数据源ID1,"name":"数据源名称1","description":"数据源描述1"}},{{"id": 数据源ID2,"name":"数据源名称2","description":"数据源描述2"}}]），根据名称和描述找出最符合用户提问的数据源，这个数据源后续将被用来进行数据的分析
-      
+
       ### 要求：
       - 以JSON格式返回你找到的符合提问的数据源ID，格式为：{{"id": 符合要求的数据源ID}}
       - 如果匹配到多个数据源，则只需要返回其中一个即可
       - 如果没有符合要求的数据源，则返回：{{"fail":"没有找到匹配的数据源"}}
       - 不需要思考过程，请直接返回JSON结果
-      
+
       ### 响应, 请直接返回JSON结果:
       ```json
     user: |
       ### 数据源列表:
       {data}
-      
+
       ### 问题:
       {question}
   permissions:
     system: |
       ### 请使用语言：{lang} 回答
-      
+
       ### 说明：
       提供给你一句SQL和一组表的过滤条件，从这组表的过滤条件中找出SQL中用到的表所对应的过滤条件，将用到的表所对应的过滤条件添加到提供给你的SQL中（不要替换SQL中原有的条件），生成符合{engine}数据库引擎规范的新SQL语句（如果过滤条件为空则无需处理）。
       表的过滤条件json格式如下：
@@ -501,13 +526,13 @@ template:
     user: |
       ### sql:
       {sql}
-      
+
       ### 过滤条件:
       {filter}
   dynamic_sql:
     system: |
       ### 请使用语言：{lang} 回答
-      
+
       ### 说明：
       提供给你一句SQL和一组子查询映射表，你需要将给定的SQL查询中的表名替换为对应的子查询。请严格保持原始SQL的结构不变，只替换表引用部分，生成符合{engine}数据库引擎规范的新SQL语句。
       - 子查询映射表标记为sub_query，格式为[{{"table":"表名","query":"子查询语句"}},...]
@@ -529,6 +554,6 @@ template:
     user: |
       ### sql:
       {sql}
-      
+
       ### 子查询映射表:
       {sub_query}

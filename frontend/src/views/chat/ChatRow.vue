@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ChatInfo, type ChatMessage } from '@/api/chat.ts'
-import logo_fold from '@/assets/logo/sifa1.svg'
+import logo_content from '@/assets/logo/content.png'
 import { useAppearanceStoreWithOut } from '@/stores/appearance'
 import custom_small from '@/assets/svg/logo-custom_small.svg'
 
@@ -31,7 +31,7 @@ const appearanceStore = useAppearanceStoreWithOut()
         />
         <el-icon v-else-if="!hideAvatar">
           <custom_small v-if="appearanceStore.themeColor === 'custom'"></custom_small>
-          <logo_fold v-else />
+          <img v-else :src="logo_content" alt="" width="28" height="28" />
         </el-icon>
       </div>
       <div :class="{ 'row-full': msg.role === 'assistant', 'width-auto': msg.role === 'user' }">

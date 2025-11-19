@@ -1,10 +1,11 @@
 <script lang="ts" setup>
 import { ref, computed, onUnmounted } from 'vue'
 import Menu from './Menu.vue'
-import custom_small from '@/assets/logo/sifaju.svg'
+import logoZuo from '@/assets/logo/zuo.png'
 import Workspace from './Workspace.vue'
 import Person from './Person.vue'
-import LOGO_fold from '@/assets/logo/sifaju.svg'
+// Using a PNG asset for the logo (zuo.png)
+// `logoZuo` is a URL string; use <img :src="logoZuo" /> in template
 import icon_moments_categories_outlined from '@/assets/svg/icon_moments-categories_outlined.svg'
 import icon_side_fold_outlined from '@/assets/svg/icon_side-fold_outlined.svg'
 import icon_side_expand_outlined from '@/assets/svg/icon_side-expand_outlined.svg'
@@ -70,16 +71,24 @@ const showSysmenu = computed(() => {
             :class="!collapse && 'collapse-icon'"
             alt=""
           />
-          <custom_small
+          <img
             v-else-if="appearanceStore.themeColor !== 'default'"
             :style="{ marginLeft: collapse ? '5px' : 0 }"
             :class="!collapse && 'collapse-icon'"
-          ></custom_small>
-          <LOGO_fold
+            :src="logoZuo"
+            height="30"
+            width="30"
+            alt=""
+          />
+          <img
             v-else
             :style="{ marginLeft: collapse ? '5px' : 0 }"
             :class="!collapse && 'collapse-icon'"
-          ></LOGO_fold>
+            :src="logoZuo"
+            height="30"
+            width="30"
+            alt=""
+          />
           <span v-if="!collapse">{{ $t('training.system_anagement') }}</span>
         </div>
       </template>
@@ -107,14 +116,18 @@ const showSysmenu = computed(() => {
               appearanceStore.name
             }}</span>
           </div>
-          <custom_small
+          <img
             v-else-if="collapse"
             :style="{ marginLeft: collapse ? '5px' : 0 }"
             :class="!collapse && 'collapse-icon'"
-          ></custom_small>
+            :src="logoZuo"
+            height="30"
+            width="30"
+            alt=""
+          />
 
           <div v-else class="default-sqlbot">
-            <custom_small class="collapse-icon"></custom_small>
+            <img class="collapse-icon" :src="logoZuo" height="30" width="30" alt="" />
             <span style="max-width: 150px" :title="appearanceStore.name" class="ellipsis">{{
               appearanceStore.name
             }}</span>
@@ -143,13 +156,17 @@ const showSysmenu = computed(() => {
               appearanceStore.name
             }}</span>
           </div>
-          <custom_small
+          <img
             v-else-if="collapse"
             style="margin: 0 0 6px 5px; cursor: pointer"
             @click="toChatIndex"
-          ></custom_small>
+            :src="logoZuo"
+            height="30"
+            width="30"
+            alt=""
+          />
           <div v-else class="default-sqlbot">
-            <custom_small class="collapse-icon"></custom_small>
+            <img class="collapse-icon" :src="logoZuo" height="30" width="30" alt="" />
             <span style="max-width: 150px" :title="appearanceStore.name" class="ellipsis">{{
               appearanceStore.name
             }}</span>
@@ -178,13 +195,24 @@ const showSysmenu = computed(() => {
               appearanceStore.name
             }}</span>
           </div>
-          <LOGO_fold
+          <img
             v-else-if="collapse"
             style="margin: 0 0 6px 5px; cursor: pointer"
             @click="toChatIndex"
-          ></LOGO_fold>
+            :src="logoZuo"
+            height="30"
+            width="30"
+            alt=""
+          />
           <div v-else class="default-sqlbot">
-            <LOGO_fold class="collapse-icon" @click="toChatIndex"></LOGO_fold>
+            <img
+              class="collapse-icon"
+              @click="toChatIndex"
+              :src="logoZuo"
+              height="30"
+              width="30"
+              alt=""
+            />
             <span style="max-width: 150px" :title="appearanceStore.name" class="ellipsis">{{
               appearanceStore.name
             }}</span>

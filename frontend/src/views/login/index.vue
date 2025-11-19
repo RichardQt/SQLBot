@@ -6,11 +6,7 @@
     <div class="login-content">
       <div class="login-right">
         <div class="login-logo-icon">
-          <img height="52" v-if="loginBg" :src="loginBg" alt="" />
-          <el-icon size="52" v-else
-            ><custom_small v-if="appearanceStore.themeColor !== 'default'"></custom_small>
-            <LOGO_fold v-else></LOGO_fold
-          ></el-icon>
+          <img height="52" :src="touxiang" alt="" />
           <span style="margin-left: 14px; font-size: 34px; font-weight: 900; color: #485559">{{
             appearanceStore.name
           }}</span>
@@ -63,11 +59,11 @@ import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useI18n } from 'vue-i18n'
-import custom_small from '@/assets/svg/logo-custom_small.svg'
-import LOGO_fold from '@/assets/LOGO-fold.svg'
-import login_image from '@/assets/embedded/login_image.png'
+import touxiang from '@/assets/logo/touxiang.png'
+// import login_image from '@/assets/embedded/login_image.png'
+import loginBgImage from '@/assets/logo/bg.png'
 import { useAppearanceStoreWithOut } from '@/stores/appearance'
-import loginImage from '@/assets/blue/login-image_blue.png'
+// import loginImage from '@/assets/blue/login-image_blue.png'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -80,11 +76,8 @@ const loginForm = ref({
 })
 
 const bg = computed(() => {
-  return appearanceStore.getBg || (appearanceStore.isBlue ? loginImage : login_image)
-})
-
-const loginBg = computed(() => {
-  return appearanceStore.getLogin
+  // 优先使用站点设置中配置的背景图，否则使用新的默认背景图
+  return appearanceStore.getBg || loginBgImage
 })
 
 const rules = {
@@ -117,10 +110,14 @@ const submitForm = () => {
   .login-left {
     display: flex;
     height: 100%;
-    width: 40%;
+    width: 45%;
+    min-width: 260px;
     img {
       height: 100%;
-      max-width: 100%;
+      width: 100%;
+      object-fit: cover;
+      /* 向右移动背景图 */
+      object-position: 2% center;
     }
   }
 

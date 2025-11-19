@@ -107,6 +107,7 @@ import login_image from '@/assets/embedded/login_image.png'
 import logoHeader from '@/assets/blue/LOGO-head_blue.png'
 import custom_small from '@/assets/svg/logo-custom_small.svg'
 import loginImage from '@/assets/blue/login-image_blue.png'
+import loginBgImage from '@/assets/logo/bg.png'
 import { propTypes } from '@/utils/propTypes'
 import { isBtnShow } from '@/utils/utils'
 import { useI18n } from 'vue-i18n'
@@ -148,7 +149,7 @@ const pageBg = computed(() =>
   !props.bg
     ? props.isBlue
       ? loginImage
-      : null
+      : loginBgImage
     : props.bg.startsWith('blob')
       ? props.bg
       : baseUrl + props.bg
@@ -245,12 +246,20 @@ onMounted(() => {
     .left-img {
       overflow: hidden;
       height: 100%;
-      width: 40%;
-      min-width: 240px;
+      width: 45%;
+      min-width: 260px;
       .login-image {
         background-size: 100% 100%;
         width: 100%;
         height: 100%;
+        img,
+        .el-image__inner {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          /* 将预览图片略微向右移动 */
+          object-position: 20% center;
+        }
       }
     }
     .right-container {

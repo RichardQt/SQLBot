@@ -200,3 +200,5 @@ test.py
 *.md
 backend/docs/text2sql-technical-implementation.md
 .github/instructions/rules.instructions.md
+backend/logs/*
+backend/logs/*
