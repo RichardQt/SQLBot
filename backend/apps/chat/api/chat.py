@@ -10,8 +10,8 @@ from sqlalchemy import and_, select
 
 from apps.chat.curd.chat import list_chats, get_chat_with_records, create_chat, rename_chat, \
     delete_chat, get_chat_chart_data, get_chat_predict_data, get_chat_with_records_with_data, get_chat_record_by_id, \
-    format_json_data, format_json_list_data, update_chat_log_feedback
-from apps.chat.models.chat_model import CreateChat, ChatRecord, RenameChat, ChatQuestion, ExcelData
+    format_json_data, format_json_list_data, update_chat_log_feedback, update_multi_turn_setting
+from apps.chat.models.chat_model import CreateChat, ChatRecord, RenameChat, ChatQuestion, ExcelData, UpdateMultiTurn
 from apps.chat.task.llm import LLMService
 from common.core.deps import CurrentAssistant, SessionDep, CurrentUser, Trans
 
@@ -283,6 +283,36 @@ async def update_feedback(session: SessionDep, log_id: int, feedback: str):
     try:
         update_chat_log_feedback(session, log_id, feedback)
         return {"success": True, "message": "Feedback updated successfully"}
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )
+
+
+@router.post("/log/feedback")
+async def update_log_feedback(
+    session: SessionDep,
+    chat_id: str,
+    record_id: int,
+    action: str
+):
+    try:
+        return update_chat_log_feedback(session, chat_id, record_id, action)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )
+
+
+@router.post("/multi-turn/update")
+async def update_multi_turn(
+    session: SessionDep,
+    update_obj: UpdateMultiTurn
+):
+    try:
+        return update_multi_turn_setting(session, update_obj.chat_id, update_obj.enable_multi_turn)
     except Exception as e:
         raise HTTPException(
             status_code=500,

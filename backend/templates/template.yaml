@@ -557,3 +557,28 @@ template:
 
       ### 子查询映射表:
       {sub_query}
+    context_analysis:
+    system: |
+      你是意图识别专家。你的任务是判断当前问题是否与上一个问题相关，以及是否需要结合上一个问题的上下文才能理解。
+
+      上一个问题: {previous_question}
+      当前问题: {current_question}
+
+      如果当前问题是追问、指代了上一个问题中的实体，或省略了能从上一个问题推断出的信息，则两者相关。
+      如果当前问题是全新主题且可以独立理解，则两者不相关。
+
+      返回一个包含单个布尔字段"is_related"的JSON对象。
+      示例: {{"is_related": true}} 或 {{"is_related": false}}
+  question_complete:
+    system: |
+      你是问题补全专家。你的任务是基于上一个问题重写当前问题，使其成为一个独立、语义完整的问题。
+
+      上一个问题: {previous_question}
+      当前问题: {current_question}
+
+      请结合上一个问题的上下文重写当前问题，确保重写后的问题清晰表达用户意图并包含所有必要信息。
+      不要回答问题，只需重写问题。
+
+      返回一个包含单个字符串字段"complete_question"的JSON对象。
+      示例: {{"complete_question": "重写后的问题内容"}}
+```

@@ -151,6 +151,7 @@ export class Chat {
   datasource?: number
   engine_type?: string
   ds_type?: string
+  enable_multi_turn?: boolean
 
   constructor()
   constructor(
@@ -160,7 +161,8 @@ export class Chat {
     brief: string,
     chat_type: string,
     datasource: number,
-    engine_type: string
+    engine_type: string,
+    enable_multi_turn?: boolean
   )
   constructor(
     id?: number,
@@ -169,7 +171,8 @@ export class Chat {
     brief?: string,
     chat_type?: string,
     datasource?: number,
-    engine_type?: string
+    engine_type?: string,
+    enable_multi_turn?: boolean
   ) {
     this.id = id
     this.create_time = getDate(create_time)
@@ -178,6 +181,7 @@ export class Chat {
     this.chat_type = chat_type
     this.datasource = datasource
     this.engine_type = engine_type
+    this.enable_multi_turn = enable_multi_turn
   }
 }
 
@@ -199,7 +203,8 @@ export class ChatInfo extends Chat {
     ds_type: string,
     datasource_name: string,
     datasource_exists: boolean,
-    records: Array<ChatRecord>
+    records: Array<ChatRecord>,
+    enable_multi_turn?: boolean
   )
   constructor(
     param1?: number | Chat,
@@ -212,7 +217,8 @@ export class ChatInfo extends Chat {
     ds_type?: string,
     datasource_name?: string,
     datasource_exists: boolean = true,
-    records: Array<ChatRecord> = []
+    records: Array<ChatRecord> = [],
+    enable_multi_turn?: boolean
   ) {
     super()
     if (param1 !== undefined) {
@@ -225,6 +231,7 @@ export class ChatInfo extends Chat {
         this.datasource = param1.datasource
         this.engine_type = param1.engine_type
         this.ds_type = param1.ds_type
+        this.enable_multi_turn = param1.enable_multi_turn
       } else {
         this.id = param1
         this.create_time = getDate(create_time)
@@ -234,6 +241,7 @@ export class ChatInfo extends Chat {
         this.datasource = datasource
         this.engine_type = engine_type
         this.ds_type = ds_type
+        this.enable_multi_turn = enable_multi_turn
       }
     }
     this.datasource_name = datasource_name
@@ -302,7 +310,8 @@ export const chatApi = {
       data.ds_type,
       data.datasource_name,
       data.datasource_exists,
-      toChatRecordList(data.records)
+      toChatRecordList(data.records),
+      data.enable_multi_turn
     )
   },
   toChatInfoList: (list: any[] = []): ChatInfo[] => {
@@ -359,4 +368,6 @@ export const chatApi = {
     }),
   updateFeedback: (log_id: number, feedback: 'like' | 'dislike') =>
     request.post(`/chat/log/${log_id}/feedback?feedback=${feedback}`),
+  updateMultiTurn: (chat_id: number, enable_multi_turn: boolean) =>
+    request.post('/chat/multi-turn/update', { chat_id, enable_multi_turn }),
 }

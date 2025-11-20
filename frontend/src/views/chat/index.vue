@@ -369,20 +369,32 @@
       <el-footer v-if="computedMessages.length > 0 || !isCompletePage" class="chat-footer">
         <div class="input-wrapper" @click="clickInput">
           <div v-if="isCompletePage" class="datasource">
-            <template v-if="currentChat.datasource && currentChat.datasource_name">
-              {{ t('qa.selected_datasource') }}:
-              <img
-                v-if="currentChatEngineType"
-                style="margin-left: 4px; margin-right: 4px"
-                :src="currentChatEngineType"
-                width="16px"
-                height="16px"
-                alt=""
-              />
-              <span class="name">
-                {{ currentChat.datasource_name }}
-              </span>
-            </template>
+            <div class="ds-info">
+              <template v-if="currentChat.datasource && currentChat.datasource_name">
+                {{ t('qa.selected_datasource') }}:
+                <img
+                  v-if="currentChatEngineType"
+                  style="margin-left: 4px; margin-right: 4px"
+                  :src="currentChatEngineType"
+                  width="16px"
+                  height="16px"
+                  alt=""
+                />
+                <span class="name">
+                  {{ currentChat.datasource_name }}
+                </span>
+              </template>
+            </div>
+            <div class="chat-settings" v-if="currentChat.id">
+              <el-tooltip content="开启后，AI将结合历史上下文理解您的问题" placement="top">
+                <el-switch
+                  v-model="currentChat.enable_multi_turn"
+                  size="small"
+                  active-text="多轮对话"
+                  @change="handleMultiTurnChange"
+                />
+              </el-tooltip>
+            </div>
           </div>
           <el-input
             ref="inputRef"
@@ -446,6 +458,7 @@ import { onClickOutside } from '@vueuse/core'
 import { useAppearanceStoreWithOut } from '@/stores/appearance'
 import { useUserStore } from '@/stores/user'
 import { debounce } from 'lodash-es'
+import { ElMessage } from 'element-plus'
 
 import router from '@/router'
 const userStore = useUserStore()
@@ -1029,6 +1042,18 @@ onMounted(() => {
   getChatList(jumpCreatChat)
   assistantPrepareInit()
 })
+
+const handleMultiTurnChange = async (val: boolean | string | number) => {
+  if (!currentChat.value.id) return
+  try {
+    await chatApi.updateMultiTurn(currentChat.value.id, !!val)
+    ElMessage.success(!!val ? '已开启多轮对话' : '已关闭多轮对话')
+  } catch (error) {
+    console.error(error)
+    currentChat.value.enable_multi_turn = !val
+    ElMessage.error('设置失败')
+  }
+}
 </script>
 
 <style lang="less" scoped>
@@ -1131,8 +1156,7 @@ onMounted(() => {
         margin-top: 1px;
         left: 0;
         top: 0;
-        padding-top: 12px;
-        padding-left: 12px;
+        padding: 12px 12px 0 12px;
         z-index: 10;
         background: transparent;
         line-height: 22px;
@@ -1143,9 +1167,21 @@ onMounted(() => {
         color: rgba(100, 106, 115, 1);
         display: flex;
         align-items: center;
+        justify-content: space-between;
+
+        .ds-info {
+          display: flex;
+          align-items: center;
+        }
 
         .name {
           color: rgba(31, 35, 41, 1);
+        }
+
+        .chat-settings {
+          margin-right: 8px;
+          display: flex;
+          align-items: center;
         }
       }
 

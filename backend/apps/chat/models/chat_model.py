@@ -80,6 +80,10 @@ class Chat(SQLModel, table=True):
     engine_type: str = Field(max_length=64)
     origin: Optional[int] = Field(
         sa_column=Column(Integer, nullable=False, default=0))  # 0: default, 1: mcp, 2: assistant
+    enable_multi_turn: bool = Field(
+        sa_column=Column(Boolean, nullable=False, default=False),
+        description="是否开启多轮对话功能"
+    )
 
 
 class ChatRecord(SQLModel, table=True):
@@ -94,6 +98,10 @@ class ChatRecord(SQLModel, table=True):
     datasource: int = Field(sa_column=Column(BigInteger, nullable=True))
     engine_type: str = Field(max_length=64, nullable=True)
     question: str = Field(sa_column=Column(Text, nullable=True))
+    complete_question: str = Field(
+        sa_column=Column(Text, nullable=True),
+        description="多轮对话生成的完整问题，如果未开启则与question字段一致"
+    )
     sql_answer: str = Field(sa_column=Column(Text, nullable=True))
     sql: str = Field(sa_column=Column(Text, nullable=True))
     sql_exec_result: str = Field(sa_column=Column(Text, nullable=True))
@@ -120,6 +128,7 @@ class ChatRecordResult(BaseModel):
     create_time: Optional[datetime] = None
     finish_time: Optional[datetime] = None
     question: Optional[str] = None
+    complete_question: Optional[str] = None
     sql_answer: Optional[str] = None
     sql: Optional[str] = None
     data: Optional[str] = None
@@ -149,6 +158,12 @@ class CreateChat(BaseModel):
     question: str = None
     datasource: int = None
     origin: Optional[int] = 0  # 0是页面上，mcp是1，小助手是2
+    enable_multi_turn: Optional[bool] = False
+
+
+class UpdateMultiTurn(BaseModel):
+    chat_id: int
+    enable_multi_turn: bool
 
 
 class RenameChat(BaseModel):
@@ -167,6 +182,7 @@ class ChatInfo(BaseModel):
     ds_type: str = ''
     datasource_name: str = ''
     datasource_exists: bool = True
+    enable_multi_turn: bool = False
     records: List[ChatRecord | dict] = []
 
 

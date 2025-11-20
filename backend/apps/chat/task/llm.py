@@ -33,6 +33,8 @@ from apps.chat.curd.chat import save_question, save_sql_answer, save_sql, \
     get_last_execute_sql_error
 from apps.chat.models.chat_model import ChatQuestion, ChatRecord, Chat, RenameChat, ChatLog, OperationEnum, \
     ChatFinishStep
+from apps.chat.task.context_analyzer import ContextAnalyzer
+from apps.chat.task.question_completer import QuestionCompleter
 from apps.data_training.curd.data_training import get_training_template
 from apps.datasource.crud.datasource import get_table_schema
 from apps.datasource.crud.permission import get_row_permission_filters, is_normal_user
@@ -42,6 +44,8 @@ from apps.db.db import exec_sql, get_version, check_connection
 from apps.system.crud.assistant import AssistantOutDs, AssistantOutDsFactory, get_assistant_ds
 from apps.system.schemas.system_schema import AssistantOutDsSchema
 from apps.terminology.curd.terminology import get_terminology_template
+from apps.chat.task.context_analyzer import ContextAnalyzer
+from apps.chat.task.question_completer import QuestionCompleter
 from common.core.config import settings
 from common.core.db import engine
 from common.core.deps import CurrentAssistant, CurrentUser
@@ -168,6 +172,71 @@ class LLMService:
                 return False
         except Exception as e:
             return True
+
+    def process_multi_turn_question(
+        self, 
+        session: Session,
+        chat_id: int,
+        current_question: str
+    ) -> str:
+        """
+        处理多轮对话问题
+        
+        Args:
+            session: 数据库会话
+            chat_id: 会话ID
+            current_question: 当前问题
+            
+        Returns:
+            str: 完整问题（可能是原始问题或补全后的问题）
+        """
+        try:
+            # 1. 检查是否开启多轮对话
+            chat = session.get(Chat, chat_id)
+            if not chat or not chat.enable_multi_turn:
+                return current_question
+            
+            # 2. 获取上一轮问题
+            previous_question = self._get_previous_question(session, chat_id)
+            if not previous_question:
+                return current_question
+            
+            # 3. 意图识别
+            analyzer = ContextAnalyzer(self.llm, self.chat_question.lang)
+            is_relevant = analyzer.analyze_relevance(
+                previous_question, 
+                current_question
+            )
+            
+            # 4. 问题补全
+            if is_relevant:
+                completer = QuestionCompleter(self.llm, self.chat_question.lang)
+                complete_question = completer.complete_question(
+                    previous_question, 
+                    current_question
+                )
+                return complete_question
+            
+            return current_question
+        except Exception as e:
+            SQLBotLogUtil.error(f"Multi-turn processing failed: {str(e)}")
+            return current_question
+    
+    def _get_previous_question(
+        self, 
+        session: Session, 
+        chat_id: int
+    ) -> Optional[str]:
+        """获取上一轮对话的完整问题"""
+        stmt = (
+            select(ChatRecord.complete_question)
+            .where(ChatRecord.chat_id == chat_id)
+            .where(ChatRecord.complete_question.isnot(None))
+            .order_by(ChatRecord.create_time.desc())
+            .limit(1)
+        )
+        result = session.execute(stmt).scalar()
+        return result
 
     def init_messages(self):
         last_sql_messages: List[dict[str, Any]] = self.generate_sql_logs[-1].messages if len(
@@ -996,6 +1065,22 @@ class LLMService:
                 yield emit_step_start(1, '正在分析您的问题...')
                 time.sleep(0.12)
                 yield emit_step_progress(1, 25, '识别问题意图...')
+
+            # Multi-turn processing
+            if in_chat:
+                complete_question = self.process_multi_turn_question(
+                    _session, 
+                    self.chat_question.chat_id, 
+                    self.chat_question.question
+                )
+                if complete_question != self.chat_question.question:
+                    self.chat_question.question = complete_question
+                    # Update record with complete question
+                    self.record = _session.merge(self.record)
+                    self.record.complete_question = complete_question
+                    _session.add(self.record)
+                    _session.commit()
+                    yield emit_step_progress(1, 40, '已结合上下文补全问题')
 
             if self.ds:
                 oid = self.ds.oid if isinstance(self.ds, CoreDatasource) else 1

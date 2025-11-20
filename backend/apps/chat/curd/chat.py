@@ -60,6 +60,22 @@ def delete_chat(session, chart_id) -> str:
     return f'Chat with id {chart_id} has been deleted'
 
 
+def update_multi_turn_setting(
+    session: SessionDep,
+    chat_id: int,
+    enable_multi_turn: bool
+) -> bool:
+    """更新会话的多轮对话设置"""
+    chat = session.get(Chat, chat_id)
+    if not chat:
+        raise Exception(f"Chat with id {chat_id} not found")
+    
+    chat.enable_multi_turn = enable_multi_turn
+    session.add(chat)
+    session.commit()
+    return True
+
+
 def get_chart_config(session: SessionDep, chart_record_id: int):
     stmt = select(ChatRecord.chart).where(and_(ChatRecord.id == chart_record_id))
     res = session.execute(stmt)
@@ -193,7 +209,7 @@ def get_chat_with_records(session: SessionDep, chart_id: int, current_user: Curr
     predict_alias_log = aliased(ChatLog)
 
     stmt = (select(ChatRecord.id, ChatRecord.chat_id, ChatRecord.create_time, ChatRecord.finish_time,
-                   ChatRecord.question, ChatRecord.sql_answer, ChatRecord.sql,
+                   ChatRecord.question, ChatRecord.complete_question, ChatRecord.sql_answer, ChatRecord.sql,
                    ChatRecord.chart_answer, ChatRecord.chart, ChatRecord.analysis, ChatRecord.predict,
                    ChatRecord.datasource_select_answer, ChatRecord.analysis_record_id, ChatRecord.predict_record_id,
                    ChatRecord.recommended_question, ChatRecord.first_chat,
@@ -223,7 +239,7 @@ def get_chat_with_records(session: SessionDep, chart_id: int, current_user: Curr
         ChatRecord.create_time))
     if with_data:
         stmt = select(ChatRecord.id, ChatRecord.chat_id, ChatRecord.create_time, ChatRecord.finish_time,
-                      ChatRecord.question, ChatRecord.sql_answer, ChatRecord.sql,
+                      ChatRecord.question, ChatRecord.complete_question, ChatRecord.sql_answer, ChatRecord.sql,
                       ChatRecord.chart_answer, ChatRecord.chart, ChatRecord.analysis, ChatRecord.predict,
                       ChatRecord.datasource_select_answer, ChatRecord.analysis_record_id, ChatRecord.predict_record_id,
                       ChatRecord.recommended_question, ChatRecord.first_chat,
@@ -238,7 +254,7 @@ def get_chat_with_records(session: SessionDep, chart_id: int, current_user: Curr
             record_list.append(
                 ChatRecordResult(id=row.id, chat_id=row.chat_id, create_time=row.create_time,
                                  finish_time=row.finish_time,
-                                 question=row.question, sql_answer=row.sql_answer, sql=row.sql,
+                                 question=row.question, complete_question=row.complete_question, sql_answer=row.sql_answer, sql=row.sql,
                                  chart_answer=row.chart_answer, chart=row.chart,
                                  analysis=row.analysis, predict=row.predict,
                                  datasource_select_answer=row.datasource_select_answer,
@@ -258,7 +274,7 @@ def get_chat_with_records(session: SessionDep, chart_id: int, current_user: Curr
             record_list.append(
                 ChatRecordResult(id=row.id, chat_id=row.chat_id, create_time=row.create_time,
                                  finish_time=row.finish_time,
-                                 question=row.question, sql_answer=row.sql_answer, sql=row.sql,
+                                 question=row.question, complete_question=row.complete_question, sql_answer=row.sql_answer, sql=row.sql,
                                  chart_answer=row.chart_answer, chart=row.chart,
                                  analysis=row.analysis, predict=row.predict,
                                  datasource_select_answer=row.datasource_select_answer,
@@ -369,7 +385,8 @@ def create_chat(session: SessionDep, current_user: CurrentUser, create_chat_obj:
                 create_by=current_user.id,
                 oid=current_user.oid if current_user.oid is not None else 1,
                 brief=create_chat_obj.question.strip()[:20],
-                origin=create_chat_obj.origin if create_chat_obj.origin is not None else 0)
+                origin=create_chat_obj.origin if create_chat_obj.origin is not None else 0,
+                enable_multi_turn=create_chat_obj.enable_multi_turn if create_chat_obj.enable_multi_turn is not None else False)
     ds: CoreDatasource | None = None
     if create_chat_obj.datasource:
         chat.datasource = create_chat_obj.datasource
@@ -438,6 +455,7 @@ def save_question(session: SessionDep, current_user: CurrentUser, question: Chat
     record.datasource = chat.datasource
     record.engine_type = chat.engine_type
     record.ai_modal_id = question.ai_modal_id
+    record.complete_question = question.question
 
     result = ChatRecord(**record.model_dump())
 
@@ -447,6 +465,22 @@ def save_question(session: SessionDep, current_user: CurrentUser, question: Chat
     result.id = record.id
     session.commit()
 
+    return result
+
+
+def get_previous_complete_question(
+    session: SessionDep,
+    chat_id: int
+) -> str | None:
+    """获取上一轮对话的完整问题"""
+    stmt = (
+        select(ChatRecord.complete_question)
+        .where(ChatRecord.chat_id == chat_id)
+        .where(ChatRecord.complete_question.isnot(None))
+        .order_by(ChatRecord.create_time.desc())
+        .limit(1)
+    )
+    result = session.execute(stmt).scalar()
     return result
 
 
