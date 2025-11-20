@@ -139,10 +139,7 @@
             <template v-if="isCompletePage">
               <div class="greeting">
                 <img height="32" width="32" v-if="loginBg" :src="loginBg" alt="" />
-                <el-icon size="32" v-else
-                  ><custom_small v-if="appearanceStore.themeColor !== 'default'"></custom_small>
-                  <LOGO_fold v-else></LOGO_fold
-                ></el-icon>
+                <img v-else :src="defaultAvatarPng" height="32" width="32" alt="" />
                 {{ t('qa.greeting') }}
               </div>
               <div class="sub">
@@ -159,9 +156,7 @@
                 height="30px"
                 alt=""
               />
-              <el-icon v-else size="32">
-                <logo_fold />
-              </el-icon>
+              <img v-else :src="defaultAvatarPng" class="logo" width="30px" height="30px" alt="" />
               <div class="i-am">{{ welcome }}</div>
               <div class="i-can">{{ welcomeDesc }}</div>
             </div>
@@ -191,10 +186,7 @@
               :src="logoAssistant ? logoAssistant : loginBg"
               alt=""
             />
-            <el-icon size="30" v-else
-              ><custom_small v-if="appearanceStore.themeColor !== 'default'"></custom_small>
-              <LOGO_fold v-else></LOGO_fold
-            ></el-icon>
+            <img v-else :src="defaultAvatarPng" height="30" width="30" alt="" />
             <span style="margin-left: 12px">{{ appearanceStore.name }}</span>
           </div>
         </div>
@@ -442,14 +434,12 @@ import ChatToolBar from './ChatToolBar.vue'
 import { dsTypeWithImg } from '@/views/ds/js/ds-type'
 import { useI18n } from 'vue-i18n'
 import { find, forEach } from 'lodash-es'
-import custom_small from '@/assets/logo/touxiang.png'
-import LOGO_fold from '@/assets/logo/touxiang.png'
+import defaultAvatarPng from '@/assets/logo/touxiang.png'
 import icon_new_chat_outlined from '@/assets/svg/icon_new_chat_outlined.svg'
 import icon_sidebar_outlined from '@/assets/svg/icon_sidebar_outlined.svg'
 import icon_replace_outlined from '@/assets/svg/icon_replace_outlined.svg'
 import icon_screen_outlined from '@/assets/svg/icon_screen_outlined.svg'
 import icon_start_outlined from '@/assets/svg/icon_start_outlined.svg'
-import logo_fold from '@/assets/logo/touxiang.png'
 import icon_send_filled from '@/assets/svg/icon_send_filled.svg'
 import { useAssistantStore } from '@/stores/assistant'
 import { onClickOutside } from '@vueuse/core'

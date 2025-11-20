@@ -28,7 +28,7 @@
 
    - `stream_events.py` - 流式事件定义
    - `step_manager.py` - 步骤管理器
-   - `enhanced_llm_service.py` - 增强的 LLM 服务(待实现)
+   - `enhanced_llm_service.py` - 增强的 LLM 服务
 
 2. **enhanced_chat.py** - 增强聊天 API
    - `/api/v1/chat/enhanced-question` - 增强问答接口

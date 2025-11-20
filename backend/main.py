@@ -65,6 +65,10 @@ def preload_embedding_model():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # 首先进行安全检查
+#     这是一个防守性编程措施，确保：
+
+# 生产环境安全 - 防止使用默认密钥的应用被部署
+# 开发者友好 - 如果密钥不安全，启动时立即失败
     SQLBotLogUtil.info("🔒 执行安全检查...")
     enforce_security_check(settings.SECRET_KEY, strict_mode=True)
     
