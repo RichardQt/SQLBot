@@ -27,14 +27,21 @@ class ContextAnalyzer:
             bool: True表示存在关联，False表示不存在关联
         """
         template = get_context_analysis_template()
-        system_prompt = template['system'].format(
-            previous_question=previous_question,
-            current_question=current_question
-        )
-        messages = [
-            SystemMessage(content=system_prompt),
-            HumanMessage(content="Analyze the relevance.")
-        ]
+        format_kwargs = {
+            'previous_question': previous_question,
+            'current_question': current_question,
+            'lang': self.lang,
+        }
+
+        system_prompt_tpl = template.get('system')
+        if not system_prompt_tpl:
+            raise ValueError('context_analysis.system 模板缺失')
+
+        messages = [SystemMessage(content=system_prompt_tpl.format(**format_kwargs))]
+
+        user_prompt_tpl = template.get('user')
+        if user_prompt_tpl:
+            messages.append(HumanMessage(content=user_prompt_tpl.format(**format_kwargs)))
         
         try:
             response = self.llm.invoke(messages)

@@ -174,7 +174,7 @@ class LLMService:
             return True
 
     def process_multi_turn_question(
-        self, 
+        self,
         session: Session,
         chat_id: int,
         current_question: str
@@ -196,8 +196,16 @@ class LLMService:
             if not chat or not chat.enable_multi_turn:
                 return current_question
             
+            current_record_id = getattr(self.record, 'id', None)
+            current_created_at = getattr(self.record, 'create_time', None)
+
             # 2. 获取上一轮问题
-            previous_question = self._get_previous_question(session, chat_id)
+            previous_question = self._get_previous_question(
+                session,
+                chat_id,
+                current_record_id=current_record_id,
+                current_created_at=current_created_at,
+            )
             if not previous_question:
                 return current_question
             
@@ -223,20 +231,26 @@ class LLMService:
             return current_question
     
     def _get_previous_question(
-        self, 
-        session: Session, 
-        chat_id: int
+        self,
+        session: Session,
+        chat_id: int,
+        current_record_id: Optional[int] = None,
+        current_created_at: Optional[datetime] = None,
     ) -> Optional[str]:
         """获取上一轮对话的完整问题"""
         stmt = (
             select(ChatRecord.complete_question)
             .where(ChatRecord.chat_id == chat_id)
             .where(ChatRecord.complete_question.isnot(None))
-            .order_by(ChatRecord.create_time.desc())
-            .limit(1)
         )
-        result = session.execute(stmt).scalar()
-        return result
+
+        if current_record_id:
+            stmt = stmt.where(ChatRecord.id != current_record_id)
+        if current_created_at:
+            stmt = stmt.where(ChatRecord.create_time <= current_created_at)
+
+        stmt = stmt.order_by(ChatRecord.create_time.desc(), ChatRecord.id.desc()).limit(1)
+        return session.execute(stmt).scalar()
 
     def init_messages(self):
         last_sql_messages: List[dict[str, Any]] = self.generate_sql_logs[-1].messages if len(

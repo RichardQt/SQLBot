@@ -557,7 +557,7 @@ template:
 
       ### 子查询映射表:
       {sub_query}
-    context_analysis:
+  context_analysis:
     system: |
       你是意图识别专家。你的任务是判断当前问题是否与上一个问题相关，以及是否需要结合上一个问题的上下文才能理解。
 
@@ -581,4 +581,4 @@ template:
 
       返回一个包含单个字符串字段"complete_question"的JSON对象。
       示例: {{"complete_question": "重写后的问题内容"}}
-```
+
