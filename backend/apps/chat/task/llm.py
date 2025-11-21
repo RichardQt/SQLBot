@@ -239,9 +239,8 @@ class LLMService:
     ) -> Optional[str]:
         """获取上一轮对话的完整问题"""
         stmt = (
-            select(ChatRecord.complete_question)
+            select(ChatRecord.question, ChatRecord.complete_question)
             .where(ChatRecord.chat_id == chat_id)
-            .where(ChatRecord.complete_question.isnot(None))
         )
 
         if current_record_id:
@@ -250,7 +249,11 @@ class LLMService:
             stmt = stmt.where(ChatRecord.create_time <= current_created_at)
 
         stmt = stmt.order_by(ChatRecord.create_time.desc(), ChatRecord.id.desc()).limit(1)
-        return session.execute(stmt).scalar()
+        result = session.execute(stmt).first()
+        
+        if result:
+            return result.complete_question or result.question
+        return None
 
     def init_messages(self):
         last_sql_messages: List[dict[str, Any]] = self.generate_sql_logs[-1].messages if len(
