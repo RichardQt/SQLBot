@@ -20,6 +20,10 @@ from sqlalchemy.orm import sessionmaker, scoped_session
 
 from apps.datasource.models.datasource import CoreTable, CoreDatasource
 from apps.datasource.crud.table import save_table_embedding, save_ds_embedding
+from apps.terminology.models.terminology_model import Terminology
+from apps.terminology.curd.terminology import save_embeddings as save_terminology_embeddings
+from apps.data_training.models.data_training_model import DataTraining
+from apps.data_training.curd.data_training import save_embeddings as save_training_embeddings
 from common.core.config import settings
 from common.utils.utils import SQLBotLogUtil
 
@@ -41,10 +45,22 @@ def clear_all_embeddings(session_maker):
         result = session.execute(ds_stmt)
         ds_count = result.rowcount
         SQLBotLogUtil.info(f'已清空 {ds_count} 个数据源的 embedding')
+
+        # 清空术语的 embedding
+        term_stmt = update(Terminology).values(embedding=None)
+        result = session.execute(term_stmt)
+        term_count = result.rowcount
+        SQLBotLogUtil.info(f'已清空 {term_count} 个术语的 embedding')
+
+        # 清空数据训练的 embedding
+        train_stmt = update(DataTraining).values(embedding=None)
+        result = session.execute(train_stmt)
+        train_count = result.rowcount
+        SQLBotLogUtil.info(f'已清空 {train_count} 个数据训练的 embedding')
         
         session.commit()
         SQLBotLogUtil.info('所有 embedding 数据已清空')
-        return table_count, ds_count
+        return table_count, ds_count, term_count, train_count
     except Exception as e:
         SQLBotLogUtil.error(f'清空 embedding 失败: {str(e)}')
         traceback.print_exc()
@@ -57,36 +73,65 @@ def clear_all_embeddings(session_maker):
 def regenerate_all_embeddings(session_maker):
     """重新生成所有 embedding"""
     try:
-        if not settings.TABLE_EMBEDDING_ENABLED:
-            SQLBotLogUtil.warning('TABLE_EMBEDDING_ENABLED 未启用')
-            return
-        
         SQLBotLogUtil.info('开始重新生成所有 embedding...')
-        session = session_maker()
         
-        # 获取所有表 ID
-        SQLBotLogUtil.info('获取所有表...')
-        table_ids = [t.id for t in session.query(CoreTable.id).all()]
-        SQLBotLogUtil.info(f'找到 {len(table_ids)} 个表需要生成 embedding')
-        
-        # 获取所有数据源 ID
-        SQLBotLogUtil.info('获取所有数据源...')
-        ds_ids = [ds.id for ds in session.query(CoreDatasource.id).all()]
-        SQLBotLogUtil.info(f'找到 {len(ds_ids)} 个数据源需要生成 embedding')
-        
-        session.close()
-        
-        # 生成表的 embedding
-        if table_ids:
-            SQLBotLogUtil.info('正在生成表的 embedding...')
-            save_table_embedding(session_maker, table_ids)
-            SQLBotLogUtil.info('表的 embedding 生成完成')
-        
-        # 生成数据源的 embedding
-        if ds_ids:
-            SQLBotLogUtil.info('正在生成数据源的 embedding...')
-            save_ds_embedding(session_maker, ds_ids)
-            SQLBotLogUtil.info('数据源的 embedding 生成完成')
+        if settings.TABLE_EMBEDDING_ENABLED:
+            session = session_maker()
+            
+            # 获取所有表 ID
+            SQLBotLogUtil.info('获取所有表...')
+            table_ids = [t.id for t in session.query(CoreTable.id).all()]
+            SQLBotLogUtil.info(f'找到 {len(table_ids)} 个表需要生成 embedding')
+            
+            # 获取所有数据源 ID
+            SQLBotLogUtil.info('获取所有数据源...')
+            ds_ids = [ds.id for ds in session.query(CoreDatasource.id).all()]
+            SQLBotLogUtil.info(f'找到 {len(ds_ids)} 个数据源需要生成 embedding')
+            
+            session.close()
+            
+            # 生成表的 embedding
+            if table_ids:
+                SQLBotLogUtil.info('正在生成表的 embedding...')
+                save_table_embedding(session_maker, table_ids)
+                SQLBotLogUtil.info('表的 embedding 生成完成')
+            
+            # 生成数据源的 embedding
+            if ds_ids:
+                SQLBotLogUtil.info('正在生成数据源的 embedding...')
+                save_ds_embedding(session_maker, ds_ids)
+                SQLBotLogUtil.info('数据源的 embedding 生成完成')
+        else:
+            SQLBotLogUtil.warning('TABLE_EMBEDDING_ENABLED 未启用，跳过表和数据源 embedding 生成')
+
+        if settings.EMBEDDING_ENABLED:
+            session = session_maker()
+
+            # 获取所有术语 ID
+            SQLBotLogUtil.info('获取所有术语...')
+            term_ids = [t.id for t in session.query(Terminology.id).all()]
+            SQLBotLogUtil.info(f'找到 {len(term_ids)} 个术语需要生成 embedding')
+
+            # 获取所有数据训练 ID
+            SQLBotLogUtil.info('获取所有数据训练...')
+            train_ids = [t.id for t in session.query(DataTraining.id).all()]
+            SQLBotLogUtil.info(f'找到 {len(train_ids)} 个数据训练需要生成 embedding')
+
+            session.close()
+
+            # 生成术语的 embedding
+            if term_ids:
+                SQLBotLogUtil.info('正在生成术语的 embedding...')
+                save_terminology_embeddings(session_maker, term_ids)
+                SQLBotLogUtil.info('术语的 embedding 生成完成')
+
+            # 生成数据训练的 embedding
+            if train_ids:
+                SQLBotLogUtil.info('正在生成数据训练的 embedding...')
+                save_training_embeddings(session_maker, train_ids)
+                SQLBotLogUtil.info('数据训练的 embedding 生成完成')
+        else:
+            SQLBotLogUtil.warning('EMBEDDING_ENABLED 未启用，跳过术语和数据训练 embedding 生成')
         
         SQLBotLogUtil.info('所有 embedding 重新生成完成!')
         
@@ -116,10 +161,10 @@ def main():
         session_maker = scoped_session(session_factory)
         
         # 清空所有 embedding
-        table_count, ds_count = clear_all_embeddings(session_maker)
+        table_count, ds_count, term_count, train_count = clear_all_embeddings(session_maker)
         
         print('\n' + '=' * 60)
-        print(f'已清空 {table_count} 个表和 {ds_count} 个数据源的 embedding')
+        print(f'已清空 {table_count} 个表, {ds_count} 个数据源, {term_count} 个术语, {train_count} 个数据训练的 embedding')
         print('=' * 60)
         
         # 确认是否继续

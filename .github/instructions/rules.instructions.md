@@ -23,6 +23,8 @@ applyTo: "**"
 - 唯一例外：代码标识符（变量名、函数名、类名等）遵循项目既有命名约定。
 - 违反此规范的任何输出必须立即重写为简体中文。
 
+All your thought processes, ideas, replies, hints, explanations, and descriptions will be output in Chinese. Even if the user asks a question in English, you will still need to translate all answers into Chinese. Furthermore, upon completion of the task, no test files, test case files, readme files, or Markdown files will be generated.
+
 ## 🔒 强制验证机制
 
 - 必须拒绝一切 CI、远程流水线或人工外包验证，所有验证均由本地 AI 自动执行。
@@ -234,7 +236,7 @@ applyTo: "**"
 需要操作 GitHub？
 ├─ 搜索代码 → github.search*code
 ├─ 读取文件/文档 → github.get_file_contents
-├─ 管理 PR/Issue → github.create*_/update\__
+├─ 管理 PR/Issue → github.create*\_/update\_\_
 └─ 代码审查 → github.request_copilot_review
 
 ##### ```
@@ -322,8 +324,8 @@ context7 get-library-docs context7CompatibleLibraryID="库 ID" topic="相关主�
 
 ##### ```bash
 
-desktop-commander.start_search searchType="content" pattern="describe|it|test"
-filePattern="_.spec._|_.test._"
+desktop-commander.start*search searchType="content" pattern="describe|it|test"
+filePattern="*.spec._|_.test.\_"
 
 ##### ```
 

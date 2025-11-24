@@ -178,7 +178,7 @@ class LLMService:
         session: Session,
         chat_id: int,
         current_question: str
-    ) -> str:
+    ) -> tuple[str, bool]:
         """
         处理多轮对话问题
         
@@ -188,13 +188,14 @@ class LLMService:
             current_question: 当前问题
             
         Returns:
-            str: 完整问题（可能是原始问题或补全后的问题）
+            tuple[str, bool]: (完整问题, 是否关联上下文)
         """
         try:
             # 1. 检查是否开启多轮对话
             chat = session.get(Chat, chat_id)
             if not chat or not chat.enable_multi_turn:
-                return current_question
+                SQLBotLogUtil.info(f"Multi-turn disabled or chat not found: {chat_id}")
+                return current_question, False
             
             current_record_id = getattr(self.record, 'id', None)
             current_created_at = getattr(self.record, 'create_time', None)
@@ -207,7 +208,8 @@ class LLMService:
                 current_created_at=current_created_at,
             )
             if not previous_question:
-                return current_question
+                SQLBotLogUtil.info(f"No previous question found for chat: {chat_id}")
+                return current_question, False
             
             # 3. 意图识别
             analyzer = ContextAnalyzer(self.llm, self.chat_question.lang)
@@ -215,6 +217,7 @@ class LLMService:
                 previous_question, 
                 current_question
             )
+            SQLBotLogUtil.info(f"Context relevance analysis: {is_relevant} (prev: {previous_question}, curr: {current_question})")
             
             # 4. 问题补全
             if is_relevant:
@@ -223,12 +226,17 @@ class LLMService:
                     previous_question, 
                     current_question
                 )
-                return complete_question
+                SQLBotLogUtil.info(f"Question completion result: {complete_question}")
+                
+                if complete_question == current_question:
+                    return current_question, False
+                    
+                return complete_question, True
             
-            return current_question
+            return current_question, False
         except Exception as e:
             SQLBotLogUtil.error(f"Multi-turn processing failed: {str(e)}")
-            return current_question
+            return current_question, False
     
     def _get_previous_question(
         self,
@@ -1084,8 +1092,9 @@ class LLMService:
                 yield emit_step_progress(1, 25, '识别问题意图...')
 
             # Multi-turn processing
+            intent_result = False
             if in_chat:
-                complete_question = self.process_multi_turn_question(
+                complete_question, intent_result = self.process_multi_turn_question(
                     _session, 
                     self.chat_question.chat_id, 
                     self.chat_question.question
@@ -1124,7 +1133,11 @@ class LLMService:
 
             # 步骤1: 分析问题 - 完成
             if in_chat:
-                yield emit_step_complete(1, '问题分析完成', min_duration=MIN_STEP_DURATIONS.get(1))
+                step1_result = {
+                    'complete_question': self.chat_question.question,
+                    'intent_realization': intent_result
+                }
+                yield emit_step_complete(1, '问题分析完成', result=step1_result, min_duration=MIN_STEP_DURATIONS.get(1))
 
             # return id
             if in_chat:

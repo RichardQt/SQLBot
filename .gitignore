@@ -201,3 +201,6 @@ backend/docs/text2sql-technical-implementation.md
 .github/instructions/rules.instructions.md
 backend/logs/*
 backend/logs/*
+backend/logs/debug.log.1
+backend/logs/debug.log.5
+backend/logs/info.log.1
