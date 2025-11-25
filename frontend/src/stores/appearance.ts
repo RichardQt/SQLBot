@@ -285,12 +285,12 @@ export const useAppearanceStore = defineStore('appearanceStore', {
 })
 
 const setLinkIcon = (linkWeb?: string) => {
-  const link = document.querySelector('link[rel="icon"]') as LinkHTMLAttributes
+  const link = document.querySelector('link[rel="icon"]') as unknown as LinkHTMLAttributes
   if (link) {
     if (linkWeb) {
       link['href'] = baseUrl + linkWeb
     } else {
-      link['href'] = '/LOGO-fold.svg'
+      link['href'] = '/logo.png'
     }
   }
 }

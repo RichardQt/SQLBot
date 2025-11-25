@@ -1093,12 +1093,20 @@ class LLMService:
 
             # Multi-turn processing
             intent_result = False
+            original_question = self.chat_question.question  # 保存原始问题用于后续比较
             if in_chat:
                 complete_question, intent_result = self.process_multi_turn_question(
                     _session, 
                     self.chat_question.chat_id, 
                     self.chat_question.question
                 )
+                
+                # 显示意图识别结果
+                if intent_result:
+                    yield emit_step_progress(1, 35, '识别上下文问题意图（上下文相关）')
+                else:
+                    yield emit_step_progress(1, 35, '识别上下文问题意图（独立问题）')
+                
                 if complete_question != self.chat_question.question:
                     self.chat_question.question = complete_question
                     # Update record with complete question
@@ -1106,7 +1114,8 @@ class LLMService:
                     self.record.complete_question = complete_question
                     _session.add(self.record)
                     _session.commit()
-                    yield emit_step_progress(1, 40, '已结合上下文补全问题')
+                    # 显示补全后的完整问题
+                    yield emit_step_progress(1, 45, f'已补全问题：{complete_question}')
 
             if self.ds:
                 oid = self.ds.oid if isinstance(self.ds, CoreDatasource) else 1
@@ -1134,10 +1143,17 @@ class LLMService:
             # 步骤1: 分析问题 - 完成
             if in_chat:
                 step1_result = {
+                    'original_question': original_question,
                     'complete_question': self.chat_question.question,
-                    'intent_realization': intent_result
+                    'intent_realization': intent_result,
+                    'question_completed': original_question != self.chat_question.question
                 }
-                yield emit_step_complete(1, '问题分析完成', result=step1_result, min_duration=MIN_STEP_DURATIONS.get(1))
+                # 根据是否补全问题，显示不同的完成消息
+                if original_question != self.chat_question.question:
+                    step1_message = f'问题分析完成（完整问题：{self.chat_question.question}）'
+                else:
+                    step1_message = '问题分析完成'
+                yield emit_step_complete(1, step1_message, result=step1_result, min_duration=MIN_STEP_DURATIONS.get(1))
 
             # return id
             if in_chat:

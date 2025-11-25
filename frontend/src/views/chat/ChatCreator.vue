@@ -42,6 +42,10 @@ function listDs() {
     .list()
     .then((res) => {
       datasourceList.value = res
+      // 如果只有一个数据源，自动选中它
+      if (res && res.length === 1) {
+        innerDs.value = res[0].id
+      }
     })
     .finally(() => {
       searchLoading.value = false

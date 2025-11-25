@@ -176,7 +176,9 @@ const handleStepEvent = (data: any) => {
       if (!step.details) {
         step.details = []
       }
-      if (data.message && step.details) {
+      // 更新步骤名称为完成消息（如果包含详细信息如"问题分析完成（完整问题：xxxx）"）
+      if (data.message) {
+        step.name = data.message
         step.details.push(data.message)
       }
       step.endTime = parseTimestamp(data.finished_at || data.timestamp)
