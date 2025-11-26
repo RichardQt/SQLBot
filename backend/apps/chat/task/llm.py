@@ -65,8 +65,8 @@ session_maker = scoped_session(sessionmaker(bind=engine, class_=Session))
 
 MIN_STEP_DURATIONS: dict[int, float] = {
     1: 2.1,
-    2: 1.2,
-    3: 1.6,
+    2: 0.2,
+    3: 1.2
 }
 
 
@@ -1150,7 +1150,7 @@ class LLMService:
                 }
                 # 根据是否补全问题，显示不同的完成消息
                 if original_question != self.chat_question.question:
-                    step1_message = f'问题分析完成（完整问题：{self.chat_question.question}）'
+                    step1_message = f'问题分析完成'
                 else:
                     step1_message = '问题分析完成'
                 yield emit_step_complete(1, step1_message, result=step1_result, min_duration=MIN_STEP_DURATIONS.get(1))
@@ -1203,7 +1203,7 @@ class LLMService:
             # 步骤2: 选择数据源 - 完成
             if in_chat:
                 ds_name = self.ds.name if self.ds else '未知'
-                yield emit_step_complete(2, f'已选择数据源: {ds_name}',
+                yield emit_step_complete(2, f'已选择数据源',
                                          min_duration=MIN_STEP_DURATIONS.get(2))
 
             # 步骤3: 连接数据库 - 开始
@@ -1217,7 +1217,7 @@ class LLMService:
 
             # 步骤3: 连接数据库 - 完成
             if in_chat:
-                yield emit_step_complete(3, '数据库连接成功', min_duration=MIN_STEP_DURATIONS.get(3))
+                yield emit_step_complete(3, '已连接数据库', min_duration=MIN_STEP_DURATIONS.get(3))
 
             # 步骤4: 生成SQL - 开始
             if in_chat:
@@ -1237,7 +1237,7 @@ class LLMService:
 
             # 步骤4: 生成SQL - 完成
             if in_chat:
-                yield emit_step_complete(4, 'SQL语句生成完成')
+                yield emit_step_complete(4, 'SQL生成完成')
 
             # filter sql
             SQLBotLogUtil.info(full_sql_text)
@@ -1323,7 +1323,7 @@ class LLMService:
                 
                 yield emit_step_complete(
                     5,
-                    f'查询成功，返回 {row_count} 行 {col_count} 列数据',
+                    f'数据查询完成',
                     result=result_summary,
                 )
 
@@ -1383,7 +1383,7 @@ class LLMService:
             # 步骤6: 配置图表 - 完成
             if in_chat:
                 chart_type_name = chart.get('type', '未知') if isinstance(chart, dict) else '未知'
-                yield emit_step_complete(6, f'图表配置完成({chart_type_name})')
+                yield emit_step_complete(6, f'图表配置完成')
 
             if not stream:
                 json_result['chart'] = chart
