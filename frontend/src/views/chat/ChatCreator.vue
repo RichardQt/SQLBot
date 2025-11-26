@@ -110,6 +110,29 @@ function createChat(datasource: number) {
     })
 }
 
+// 使用默认数据源（第一个数据源）直接创建对话，跳过数据源选择页面
+async function createChatWithDefaultDs() {
+  loading.value = true
+  try {
+    const res = await datasourceApi.list()
+    if (!res || res.length === 0) {
+      // 没有数据源时，显示数据源选择弹窗让用户创建
+      showDs()
+      return
+    }
+    // 使用第一个数据源作为默认数据源
+    const defaultDs = res[0]
+    // 检查数据源连接状态
+    const checkRes = await datasourceApi.check_by_id(defaultDs.id)
+    if (checkRes) {
+      createChat(defaultDs.id)
+    }
+  } catch (e) {
+    console.error(e)
+    loading.value = false
+  }
+}
+
 onMounted(() => {
   if (props.hidden) {
     return
@@ -124,6 +147,7 @@ defineExpose({
   showDs,
   hideDs,
   createChat,
+  createChatWithDefaultDs,
 })
 </script>
 

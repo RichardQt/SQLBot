@@ -636,7 +636,8 @@ const createNewChat = async () => {
     currentChatId.value = undefined
     return
   }
-  chatCreatorRef.value?.showDs()
+  // 直接使用默认数据源创建对话，跳过数据源选择页面
+  chatCreatorRef.value?.createChatWithDefaultDs()
 }
 
 function getChatList(callback?: () => void) {
