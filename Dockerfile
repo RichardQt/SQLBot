@@ -28,7 +28,7 @@ ENV APP_HOME=${SQLBOT_HOME}/app
 ENV UI_HOME=${SQLBOT_HOME}/frontend
 ENV PYTHONPATH=${SQLBOT_HOME}/app
 ENV PATH="${APP_HOME}/.venv/bin:$PATH"
-ENV UV_COMPILE_BYTECODE=1
+ENV UV_COMPILE_BYTECODE=0
 ENV UV_LINK_MODE=copy
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -86,7 +86,7 @@ ENV POSTGRES_DB=sqlbot
 ENV POSTGRES_USER=root
 ENV POSTGRES_PASSWORD=Password123@pg
 
-ENV LD_LIBRARY_PATH="/opt/sqlbot/db_client/oracle_instant_client:${LD_LIBRARY_PATH}"
+ENV LD_LIBRARY_PATH="/opt/sqlbot/db_client/oracle_instant_client:${LD_LIBRARY_PATH:-}"
 
 # Copy necessary files from builder
 COPY start.sh /opt/sqlbot/app/start.sh
