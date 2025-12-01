@@ -368,22 +368,24 @@
       </el-main>
       <el-footer v-if="computedMessages.length > 0 || !isCompletePage" class="chat-footer">
         <div class="input-wrapper" @click="clickInput">
-          <div v-if="isCompletePage" class="datasource">
-            <div class="ds-info">
-              <template v-if="currentChat.datasource && currentChat.datasource_name">
-                {{ t('qa.selected_datasource') }}:
-                <img
-                  v-if="currentChatEngineType"
-                  style="margin-left: 4px; margin-right: 4px"
-                  :src="currentChatEngineType"
-                  width="16px"
-                  height="16px"
-                  alt=""
-                />
-                <span class="name">
-                  {{ currentChat.datasource_name }}
-                </span>
-              </template>
+          <div class="datasource-settings">
+            <div v-if="isCompletePage" class="datasource">
+              <div class="ds-info">
+                <template v-if="currentChat.datasource && currentChat.datasource_name">
+                  {{ t('qa.selected_datasource') }}:
+                  <img
+                    v-if="currentChatEngineType"
+                    style="margin-left: 4px; margin-right: 4px"
+                    :src="currentChatEngineType"
+                    width="16px"
+                    height="16px"
+                    alt=""
+                  />
+                  <span class="name">
+                    {{ currentChat.datasource_name }}
+                  </span>
+                </template>
+              </div>
             </div>
             <div class="chat-settings" v-if="currentChat.id">
               <el-tooltip content="开启后，AI将结合历史上下文理解您的问题" placement="top">
@@ -402,7 +404,7 @@
             :disabled="isTyping"
             clearable
             class="input-area"
-            :class="!isCompletePage && 'is-assistant'"
+            :class="{ 'is-assistant': !isCompletePage && !currentChat.id }"
             type="textarea"
             :autosize="{ minRows: 1, maxRows: 8.583 }"
             :placeholder="t('qa.question_placeholder')"
@@ -995,7 +997,7 @@ const showFloatPopover = () => {
     floatPopoverVisible.value = true
   }
 }
-const assistantPrepareInit = () => {
+const assistantPrepareInit = async () => {
   if (isCompletePage.value || props.pageEmbedded) {
     return
   }
@@ -1004,6 +1006,11 @@ const assistantPrepareInit = () => {
     inset: '0px auto auto 0px',
   })
   goEmpty()
+  // 嵌入模式下预先创建对话，以便多轮对话按钮能立即显示
+  const assistantChat = await assistantStore.setChat()
+  if (assistantChat) {
+    onChatCreatedQuick(assistantChat as any)
+  }
   onClickOutside(floatPopoverRef, (event: any) => {
     if (floatPopoverVisible.value) {
       let parentElement: any = event.target
@@ -1039,9 +1046,22 @@ function jumpCreatChat() {
   }
 }
 
+// 页面嵌入模式下预创建对话
+const pageEmbeddedPrepareInit = async () => {
+  if (!props.pageEmbedded || isCompletePage.value) {
+    return
+  }
+  // 页面嵌入模式下预先创建对话，以便多轮对话按钮能立即显示
+  const assistantChat = await assistantStore.setChat()
+  if (assistantChat) {
+    onChatCreatedQuick(assistantChat as any)
+  }
+}
+
 onMounted(() => {
   getChatList(jumpCreatChat)
   assistantPrepareInit()
+  pageEmbeddedPrepareInit()
 })
 
 const handleMultiTurnChange = async (val: boolean | string | number) => {
@@ -1150,7 +1170,7 @@ const handleMultiTurnChange = async (val: boolean | string | number) => {
       position: relative;
       max-width: 800px;
 
-      .datasource {
+      .datasource-settings {
         width: calc(100% - 2px);
         position: absolute;
         margin-left: 1px;
@@ -1170,19 +1190,25 @@ const handleMultiTurnChange = async (val: boolean | string | number) => {
         align-items: center;
         justify-content: space-between;
 
-        .ds-info {
+        .datasource {
           display: flex;
           align-items: center;
-        }
 
-        .name {
-          color: rgba(31, 35, 41, 1);
+          .ds-info {
+            display: flex;
+            align-items: center;
+          }
+
+          .name {
+            color: rgba(31, 35, 41, 1);
+          }
         }
 
         .chat-settings {
           margin-right: 8px;
           display: flex;
           align-items: center;
+          margin-left: auto;
         }
       }
 
