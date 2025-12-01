@@ -597,7 +597,7 @@
     "display_settings": "Display Settings",
     "header_text_color": "Header Text Color",
     "app_logo": "App Logo",
-    "maximum_size_10mb": "Recommended size: 32 x 32, supports JPG, PNG, and SVG, maximum size: 10MB",
+    "maximum_size_10mb": "Recommended size: 32 x 32, supports JPG, PNG, SVG and GIF, maximum size: 10MB",
     "replace": "Replace",
     "default_icon_position": "Default Icon Position",
     "draggable_position": "Draggable Position",

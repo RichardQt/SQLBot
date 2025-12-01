@@ -597,7 +597,7 @@
     "display_settings": "显示设置",
     "header_text_color": "头部文本颜色",
     "app_logo": "应用 Logo",
-    "maximum_size_10mb": "建议尺寸 32 x 32，支持 JPG、PNG、SVG，大小不超过 10MB",
+    "maximum_size_10mb": "建议尺寸 32 x 32，支持 JPG、PNG、SVG、GIF，大小不超过 10MB",
     "replace": "替换",
     "default_icon_position": "图标默认位置",
     "draggable_position": "可拖拽位置",

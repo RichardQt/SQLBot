@@ -597,7 +597,7 @@
     "display_settings": "표시 설정",
     "header_text_color": "헤더 텍스트 색상",
     "app_logo": "애플리케이션 로고",
-    "maximum_size_10mb": "권장 크기 32 x 32, JPG, PNG, SVG 지원, 크기 10MB 이하",
+    "maximum_size_10mb": "권장 크기 32 x 32, JPG, PNG, SVG, GIF 지원, 크기 10MB 이하",
     "replace": "교체",
     "default_icon_position": "아이콘 기본 위치",
     "draggable_position": "드래그 가능한 위치",

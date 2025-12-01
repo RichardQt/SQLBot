@@ -87,6 +87,8 @@ async def picture(file_id: str):
     
     if file_id.lower().endswith(".svg"):
         media_type = "image/svg+xml"
+    elif file_id.lower().endswith(".gif"):
+        media_type = "image/gif"
     else:
         media_type = "image/jpeg"
     
@@ -114,7 +116,21 @@ async def ui(session: SessionDep, data: str = Form(), files: List[UploadFile] = 
             file_name, flag_name = SQLBotFileUtils.split_filename_and_flag(origin_file_name)
             file.filename = file_name
             if flag_name == 'logo' or flag_name == 'float_icon':
-                SQLBotFileUtils.check_file(file=file, file_types=[".jpg", ".jpeg", ".png", ".svg"], limit_file_size=(10 * 1024 * 1024))
+                if file.filename.lower().endswith('.gif'):
+                    SQLBotFileUtils.is_safe_filename(file.filename)
+                    file.file.seek(0, 2)
+                    file_size = file.file.tell()
+                    file.file.seek(0)
+                    if file_size > 10 * 1024 * 1024:
+                        raise HTTPException(status_code=400, detail="File too large")
+                    
+                    header = file.file.read(6)
+                    file.file.seek(0)
+                    if not header.startswith(b'GIF87a') and not header.startswith(b'GIF89a'):
+                         raise HTTPException(status_code=400, detail="Invalid GIF file")
+                else:
+                    SQLBotFileUtils.check_file(file=file, file_types=[".jpg", ".jpeg", ".png", ".svg"], limit_file_size=(10 * 1024 * 1024))
+                
                 if config_obj.get(flag_name):
                     SQLBotFileUtils.delete_file(config_obj.get(flag_name))
                 file_id = await SQLBotFileUtils.upload(file)
