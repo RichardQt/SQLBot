@@ -387,12 +387,13 @@
                 </template>
               </div>
             </div>
-            <div class="chat-settings" v-if="currentChat.id">
+            <div class="chat-settings">
               <el-tooltip content="开启后，AI将结合历史上下文理解您的问题" placement="top">
                 <el-switch
                   v-model="currentChat.enable_multi_turn"
                   size="small"
                   active-text="多轮对话"
+                  :disabled="!currentChat.id"
                   @change="handleMultiTurnChange"
                 />
               </el-tooltip>
@@ -1048,7 +1049,7 @@ function jumpCreatChat() {
 
 // 页面嵌入模式下预创建对话
 const pageEmbeddedPrepareInit = async () => {
-  if (!props.pageEmbedded || isCompletePage.value) {
+  if (!props.pageEmbedded) {
     return
   }
   // 页面嵌入模式下预先创建对话，以便多轮对话按钮能立即显示
@@ -1068,7 +1069,6 @@ const handleMultiTurnChange = async (val: boolean | string | number) => {
   if (!currentChat.value.id) return
   try {
     await chatApi.updateMultiTurn(currentChat.value.id, !!val)
-    ElMessage.success(!!val ? '已开启多轮对话' : '已关闭多轮对话')
   } catch (error) {
     console.error(error)
     currentChat.value.enable_multi_turn = !val
