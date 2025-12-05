@@ -34,6 +34,7 @@ class BaseUserDTO(BaseUser, BaseCreatorDTO):
     language: str = Field(pattern=r"^(zh-CN|en|ko-KR)$", default="zh-CN", description="用户语言")
     password: str
     status: int = 1
+    origin: int = 0
 
     def to_dict(self):
         return {
@@ -53,6 +54,7 @@ class UserCreator(BaseUser):
     name: str = Field(min_length=1, max_length=100, description="用户名")
     email: str = Field(min_length=1, max_length=100, description="用户邮箱")
     status: int = 1
+    origin: Optional[int] = 0
     oid_list: Optional[list[int]] = None
 
     """ @field_validator("email")
@@ -70,7 +72,7 @@ class UserGrid(UserEditor):
     create_time: int
     language: str = "zh-CN"
     # space_name: Optional[str] = None
-    origin: str = ''
+    # origin: str = ''
 
 
 class PwdEditor(BaseModel):
@@ -115,6 +117,7 @@ class AssistantHeader(AssistantDTO):
     unique: Optional[str] = None
     certificate: Optional[str] = None
     online: bool = False
+    request_origin: Optional[str] = None
 
 
 class AssistantValidator(BaseModel):
@@ -176,6 +179,7 @@ class AssistantOutDsBase(BaseModel):
     type_name: Optional[str] = None
     comment: Optional[str] = None
     description: Optional[str] = None
+    configuration: Optional[str] = None
 
 
 class AssistantOutDsSchema(AssistantOutDsBase):

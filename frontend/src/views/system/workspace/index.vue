@@ -269,6 +269,9 @@ const delWorkspace = (row: any) => {
         message: t('dashboard.delete_success'),
       })
       init()
+      if (row.id === currentTable.value.id) {
+        currentTable.value = {}
+      }
       if (row.id === userStore.getOid) {
         userStore.setOid('1')
         await userStore.info()
@@ -347,7 +350,7 @@ const handleCurrentChange = (val: number) => {
             <el-popover
               trigger="click"
               :teleported="false"
-              popper-class="popover-card"
+              popper-class="popover-card_workspack"
               placement="bottom"
             >
               <template #reference>
@@ -865,11 +868,11 @@ const handleCurrentChange = (val: number) => {
 }
 </style>
 <style lang="less">
-.popover-card.popover-card.popover-card {
+.popover-card_workspack.popover-card_workspack.popover-card_workspack {
   box-shadow: 0px 4px 8px 0px #1f23291a;
   border-radius: 4px;
   border: 1px solid #dee0e3;
-  width: 120px !important;
+  width: fit-content !important;
   min-width: 120px !important;
   padding: 0;
   .content {
@@ -885,7 +888,7 @@ const handleCurrentChange = (val: number) => {
     }
     .item {
       position: relative;
-      padding-left: 12px;
+      padding: 0 12px;
       height: 40px;
       display: flex;
       align-items: center;
@@ -902,7 +905,7 @@ const handleCurrentChange = (val: number) => {
 
       &::after {
         content: '';
-        width: 112px;
+        width: calc(100% - 8px);
         height: 32px;
         border-radius: 4px;
         position: absolute;

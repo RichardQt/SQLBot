@@ -1,37 +1,13 @@
 <template>
-  <el-popover
+  <el-icon
     v-if="assistantStore.assistant && !assistantStore.pageEmbedded && assistantStore.type != 4"
-    :width="280"
-    placement="bottom-start"
-    popper-class="popover-chat_history popover-chat_history_small"
+    class="show-history_icon"
+    :class="{ 'embedded-history-hidden': embeddedHistoryHidden }"
+    size="20"
+    @click="showFloatPopover"
   >
-    <template #reference>
-      <el-icon
-        class="show-history_icon"
-        :class="{ 'embedded-history-hidden': embeddedHistoryHidden }"
-        style=""
-        size="20"
-        @click="showFloatPopover"
-      >
-        <icon_sidebar_outlined></icon_sidebar_outlined>
-      </el-icon>
-    </template>
-    <ChatListContainer
-      ref="floatPopoverRef"
-      v-model:chat-list="chatList"
-      v-model:current-chat-id="currentChatId"
-      v-model:current-chat="currentChat"
-      v-model:loading="loading"
-      in-popover
-      :app-name="customName"
-      @go-empty="goEmpty"
-      @on-chat-created="onChatCreated"
-      @on-click-history="onClickHistory"
-      @on-chat-deleted="onChatDeleted"
-      @on-chat-renamed="onChatRenamed"
-      @on-click-side-bar-btn="hideSideBar"
-    />
-  </el-popover>
+    <icon_sidebar_outlined></icon_sidebar_outlined>
+  </el-icon>
   <el-container class="chat-container no-padding">
     <el-aside
       v-if="(isCompletePage || pageEmbedded) && chatListSideBarShow"
@@ -67,6 +43,7 @@
         placement="bottom-start"
         popper-class="popover-chat_history"
         :popper-style="{ ...defaultFloatPopoverStyle }"
+        :disabled="isPhone"
       >
         <template #reference>
           <el-button link type="primary" class="icon-btn" @click="showSideBar">
@@ -143,7 +120,10 @@
                 {{ t('qa.greeting') }}
               </div>
               <div class="sub">
-                {{ t('qa.hint_description') }}
+                {{
+                  appearanceStore.pc_welcome_desc ??
+                  '我可以查询数据、生成图表、检测数据异常、预测数据等赶快开启智能问数吧～'
+                }}
               </div>
             </template>
 
@@ -180,9 +160,9 @@
         <div v-else-if="computedMessages.length == 0 && loading" class="welcome-content-block">
           <div style="display: flex; align-items: center; height: 30px">
             <img
+              v-if="logoAssistant || loginBg"
               height="30"
               width="30"
-              v-if="logoAssistant || loginBg"
               :src="logoAssistant ? logoAssistant : loginBg"
               alt=""
             />
@@ -206,23 +186,23 @@
           >
             <template v-for="(message, _index) in computedMessages" :key="_index">
               <ChatRow
-                :logoAssistant="logoAssistant"
+                :logo-assistant="logoAssistant"
                 :current-chat="currentChat"
                 :msg="message"
                 :hide-avatar="message.first_chat"
               >
-                <RecommendQuestion
-                  v-if="message.role === 'assistant' && message.first_chat"
-                  ref="recommendQuestionRef"
-                  :current-chat="currentChat"
-                  :record-id="message.record?.id"
-                  :questions="message.recommended_question"
-                  :disabled="isTyping"
-                  :first-chat="message.first_chat"
-                  @click-question="quickAsk"
-                  @stop="onChatStop"
-                  @loading-over="loadingOver"
-                />
+                <!--                <RecommendQuestion-->
+                <!--                  v-if="message.role === 'assistant' && message.first_chat"-->
+                <!--                  ref="recommendQuestionRef"-->
+                <!--                  :current-chat="currentChat"-->
+                <!--                  :record-id="message.record?.id"-->
+                <!--                  :questions="message.recommended_question"-->
+                <!--                  :disabled="isTyping"-->
+                <!--                  :first-chat="message.first_chat"-->
+                <!--                  @click-question="quickAsk"-->
+                <!--                  @stop="onChatStop"-->
+                <!--                  @loading-over="loadingOver"-->
+                <!--                />-->
                 <UserChat v-if="message.role === 'user'" :message="message" />
                 <template v-if="message.role === 'assistant' && !message.first_chat">
                   <ChartAnswer
@@ -236,6 +216,7 @@
                     :chat-list="chatList"
                     :current-chat="currentChat"
                     :current-chat-id="currentChatId"
+                    :record-id="message.record?.id"
                     :loading="isTyping"
                     :message="message"
                     :reasoning-name="['sql_answer', 'chart_answer']"
@@ -348,6 +329,7 @@
                     :chat-list="chatList"
                     :current-chat="currentChat"
                     :current-chat-id="currentChatId"
+                    :record-id="message.record?.id"
                     :loading="isTyping"
                     :message="message"
                     @scroll-bottom="scrollToBottom"
@@ -368,36 +350,34 @@
       </el-main>
       <el-footer v-if="computedMessages.length > 0 || !isCompletePage" class="chat-footer">
         <div class="input-wrapper" @click="clickInput">
-          <div class="datasource-settings">
-            <div v-if="isCompletePage" class="datasource">
-              <div class="ds-info">
-                <template v-if="currentChat.datasource && currentChat.datasource_name">
-                  {{ t('qa.selected_datasource') }}:
-                  <img
-                    v-if="currentChatEngineType"
-                    style="margin-left: 4px; margin-right: 4px"
-                    :src="currentChatEngineType"
-                    width="16px"
-                    height="16px"
-                    alt=""
-                  />
-                  <span class="name">
-                    {{ currentChat.datasource_name }}
-                  </span>
-                </template>
-              </div>
-            </div>
-            <div class="chat-settings">
-              <el-tooltip content="开启后，AI将结合历史上下文理解您的问题" placement="top">
-                <el-switch
-                  v-model="currentChat.enable_multi_turn"
-                  size="small"
-                  active-text="多轮对话"
-                  :disabled="!currentChat.id"
-                  @change="handleMultiTurnChange"
-                />
-              </el-tooltip>
-            </div>
+          <div v-if="isCompletePage" class="datasource">
+            <template v-if="currentChat.datasource && currentChat.datasource_name">
+              {{ t('qa.selected_datasource') }}:
+              <img
+                v-if="currentChatEngineType"
+                style="margin-left: 4px; margin-right: 4px"
+                :src="currentChatEngineType"
+                width="16px"
+                height="16px"
+                alt=""
+              />
+              <span class="name">
+                {{ currentChat.datasource_name }}
+              </span>
+            </template>
+          </div>
+          <div v-if="computedMessages.length > 0 && currentChat.datasource" class="quick_question">
+            <quick-question
+              ref="quickQuestionRef"
+              :datasource-id="currentChat.datasource"
+              :current-chat="currentChat"
+              :record-id="computedMessages[0].record?.id"
+              :disabled="isTyping"
+              :first-chat="true"
+              @quick-ask="quickAsk"
+              @stop="onChatStop"
+              @loading-over="loadingOver"
+            ></quick-question>
           </div>
           <el-input
             ref="inputRef"
@@ -462,8 +442,9 @@ import { useAppearanceStoreWithOut } from '@/stores/appearance'
 import { useUserStore } from '@/stores/user'
 import { debounce } from 'lodash-es'
 import { ElMessage } from 'element-plus'
-
+import { isMobile } from '@/utils/utils'
 import router from '@/router'
+import QuickQuestion from '@/views/chat/QuickQuestion.vue'
 const userStore = useUserStore()
 const props = defineProps<{
   startChatDsId?: number
@@ -492,7 +473,9 @@ const customName = computed(() => {
   return ''
 })
 const { t } = useI18n()
-
+const isPhone = computed(() => {
+  return isMobile()
+})
 const inputMessage = ref('')
 
 const chatListRef = ref()
@@ -682,7 +665,7 @@ function onChatRenamed(chat: Chat) {
 
 const chatListSideBarShow = ref<boolean>(true)
 function hideSideBar() {
-  if (!isCompletePage.value && !props.pageEmbedded) {
+  if ((!isCompletePage.value && !props.pageEmbedded) || isPhone.value) {
     floatPopoverVisible.value = false
     return
   }
@@ -690,6 +673,10 @@ function hideSideBar() {
 }
 
 function showSideBar() {
+  if (isPhone.value) {
+    showFloatPopover()
+    return
+  }
   chatListSideBarShow.value = true
 }
 
@@ -700,13 +687,14 @@ function onChatCreatedQuick(chat: ChatInfo) {
   onChatCreated(chat)
 }
 
+const recommendQuestionRef = ref()
+const quickQuestionRef = ref()
+
 function onChatCreated(chat: ChatInfo) {
-  if (chat.records.length === 1) {
-    getRecommendQuestions(chat.records[0].id)
+  if (chat.records.length === 1 && !chat.records[0].recommended_question) {
+    // do nothing
   }
 }
-
-const recommendQuestionRef = ref()
 
 function getRecommendQuestions(id?: number) {
   nextTick(() => {
@@ -998,15 +986,7 @@ const showFloatPopover = () => {
     floatPopoverVisible.value = true
   }
 }
-const assistantPrepareInit = async () => {
-  if (isCompletePage.value || props.pageEmbedded) {
-    return
-  }
-  Object.assign(defaultFloatPopoverStyle.value, {
-    height: '100% !important',
-    inset: '0px auto auto 0px',
-  })
-  goEmpty()
+const registerClickOutside = async () => {
   // 嵌入模式下预先创建对话，以便多轮对话按钮能立即显示
   const assistantChat = await assistantStore.setChat()
   if (assistantChat) {
@@ -1028,6 +1008,17 @@ const assistantPrepareInit = async () => {
       floatPopoverVisible.value = false
     }
   })
+}
+const assistantPrepareInit = () => {
+  if (isCompletePage.value || props.pageEmbedded) {
+    return
+  }
+  Object.assign(defaultFloatPopoverStyle.value, {
+    height: '100% !important',
+    inset: '0px auto auto 0px',
+  })
+  goEmpty()
+  registerClickOutside()
 }
 defineExpose({
   createNewChat,
@@ -1060,6 +1051,12 @@ const pageEmbeddedPrepareInit = async () => {
 }
 
 onMounted(() => {
+  if (isPhone.value) {
+    chatListSideBarShow.value = false
+    if (props.pageEmbedded) {
+      registerClickOutside()
+    }
+  }
   getChatList(jumpCreatChat)
   assistantPrepareInit()
   pageEmbeddedPrepareInit()
@@ -1177,7 +1174,8 @@ const handleMultiTurnChange = async (val: boolean | string | number) => {
         margin-top: 1px;
         left: 0;
         top: 0;
-        padding: 12px 12px 0 12px;
+        padding-top: 12px;
+        padding-left: 12px;
         z-index: 10;
         background: transparent;
         line-height: 22px;
@@ -1209,6 +1207,31 @@ const handleMultiTurnChange = async (val: boolean | string | number) => {
           display: flex;
           align-items: center;
           margin-left: auto;
+        }
+      }
+
+      .quick_question {
+        width: 100px;
+        position: absolute;
+        margin-left: 1px;
+        margin-top: 1px;
+        left: 0;
+        bottom: 0;
+        padding-bottom: 12px;
+        padding-left: 12px;
+        z-index: 10;
+        background: transparent;
+        line-height: 22px;
+        font-size: 14px;
+        font-weight: 400;
+        border-top-right-radius: 16px;
+        border-top-left-radius: 16px;
+        color: rgba(100, 106, 115, 1);
+        display: flex;
+        align-items: center;
+
+        .name {
+          color: rgba(31, 35, 41, 1);
         }
       }
 

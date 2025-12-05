@@ -79,11 +79,12 @@ class Chat(SQLModel, table=True):
     datasource: int = Field(sa_column=Column(BigInteger, nullable=True))
     engine_type: str = Field(max_length=64)
     origin: Optional[int] = Field(
-        sa_column=Column(Integer, nullable=False, default=0))  # 0: default, 1: mcp, 2: assistant
+        sa_column=Column(Integer, nullable=False, default=0)) # 0: default, 1: mcp, 2: assistant
     enable_multi_turn: bool = Field(
         sa_column=Column(Boolean, nullable=False, default=False),
         description="是否开启多轮对话功能"
     )
+    brief_generate: bool = Field(default=False)
 
 
 class ChatRecord(SQLModel, table=True):
@@ -169,6 +170,7 @@ class UpdateMultiTurn(BaseModel):
 class RenameChat(BaseModel):
     id: int = None
     brief: str = ''
+    brief_generate: bool = True
 
 
 class ChatInfo(BaseModel):
@@ -206,8 +208,12 @@ class AiModelQuestion(BaseModel):
 
     def sql_sys_question(self, db_type: Union[str, DB], enable_query_limit: bool = True):
         _sql_template = get_sql_example_template(db_type)
-        _base_sql_rules = _sql_template['quot_rule'] + _sql_template['limit_rule'] + _sql_template['other_rule']
-        _query_limit = get_sql_template()['query_limit'] if enable_query_limit else get_sql_template()['no_query_limit']
+        _base_template = get_sql_template()
+        _process_check = _sql_template.get('process_check') if _sql_template.get('process_check') else _base_template[
+            'process_check']
+        _query_limit = _base_template['query_limit'] if enable_query_limit else _base_template['no_query_limit']
+        _base_sql_rules = _sql_template['quot_rule'] + _query_limit + _sql_template['limit_rule'] + _sql_template[
+            'other_rule']
         _sql_examples = _sql_template['basic_example']
         _example_engine = _sql_template['example_engine']
         _example_answer_1 = _sql_template['example_answer_1_with_limit'] if enable_query_limit else _sql_template[
@@ -216,19 +222,21 @@ class AiModelQuestion(BaseModel):
             'example_answer_2']
         _example_answer_3 = _sql_template['example_answer_3_with_limit'] if enable_query_limit else _sql_template[
             'example_answer_3']
-        return get_sql_template()['system'].format(engine=self.engine, schema=self.db_schema, question=self.question,
-                                                   lang=self.lang, terminologies=self.terminologies,
-                                                   data_training=self.data_training, custom_prompt=self.custom_prompt,
-                                                   base_sql_rules=_base_sql_rules, query_limit=_query_limit,
-                                                   basic_sql_examples=_sql_examples,
-                                                   example_engine=_example_engine,
-                                                   example_answer_1=_example_answer_1,
-                                                   example_answer_2=_example_answer_2,
-                                                   example_answer_3=_example_answer_3)
+        return _base_template['system'].format(engine=self.engine, schema=self.db_schema, question=self.question,
+                                               lang=self.lang, terminologies=self.terminologies,
+                                               data_training=self.data_training, custom_prompt=self.custom_prompt,
+                                               process_check=_process_check,
+                                               base_sql_rules=_base_sql_rules,
+                                               basic_sql_examples=_sql_examples,
+                                               example_engine=_example_engine,
+                                               example_answer_1=_example_answer_1,
+                                               example_answer_2=_example_answer_2,
+                                               example_answer_3=_example_answer_3)
 
-    def sql_user_question(self, current_time: str):
+    def sql_user_question(self, current_time: str, change_title: bool):
         return get_sql_template()['user'].format(engine=self.engine, schema=self.db_schema, question=self.question,
-                                                 rule=self.rule, current_time=current_time, error_msg=self.error_msg)
+                                                 rule=self.rule, current_time=current_time, error_msg=self.error_msg,
+                                                 change_title=change_title)
 
     def chart_sys_question(self):
         return get_chart_template()['system'].format(sql=self.sql, question=self.question, lang=self.lang)
@@ -256,8 +264,8 @@ class AiModelQuestion(BaseModel):
     def datasource_user_question(self, datasource_list: str = "[]"):
         return get_datasource_template()['user'].format(question=self.question, data=datasource_list)
 
-    def guess_sys_question(self):
-        return get_guess_question_template()['system'].format(lang=self.lang)
+    def guess_sys_question(self, articles_number: int = 4):
+        return get_guess_question_template()['system'].format(lang=self.lang, articles_number=articles_number)
 
     def guess_user_question(self, old_questions: str = "[]"):
         return get_guess_question_template()['user'].format(question=self.question, schema=self.db_schema,

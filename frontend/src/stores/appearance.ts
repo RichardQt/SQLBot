@@ -8,7 +8,6 @@ import { setTitle, setCurrentColor } from '@/utils/utils'
 const basePath = import.meta.env.VITE_API_BASE_URL
 const baseUrl = basePath + '/system/appearance/picture/'
 import { isBtnShow } from '@/utils/utils'
-import type { LinkHTMLAttributes } from 'vue'
 interface AppearanceState {
   themeColor?: string
   customColor?: string
@@ -25,6 +24,8 @@ interface AppearanceState {
   name?: string
   foot?: string
   showSlogan?: string
+  pc_welcome?: string
+  pc_welcome_desc?: string
   footContent?: string
   loaded: boolean
   showDemoTips?: boolean
@@ -60,6 +61,8 @@ export const useAppearanceStore = defineStore('appearanceStore', {
       showDemoTips: false,
       demoTipsContent: '',
       fontList: [],
+      pc_welcome: undefined,
+      pc_welcome_desc: undefined,
     }
   },
   getters: {
@@ -254,11 +257,12 @@ export const useAppearanceStore = defineStore('appearanceStore', {
           }
         )[item.pkey] = item.pval
       })
-
       this.navigate = data.navigate
       this.navigateBg = data.navigateBg
       this.themeColor = data.themeColor
       this.customColor = data.customColor
+      this.pc_welcome = data.pc_welcome
+      this.pc_welcome_desc = data.pc_welcome_desc
       const currentColor =
         this.themeColor === 'custom' && this.customColor
           ? this.customColor
@@ -285,7 +289,7 @@ export const useAppearanceStore = defineStore('appearanceStore', {
 })
 
 const setLinkIcon = (linkWeb?: string) => {
-  const link = document.querySelector('link[rel="icon"]') as unknown as LinkHTMLAttributes
+  const link = document.querySelector('link[rel="icon"]') as unknown as HTMLLinkElement
   if (link) {
     if (linkWeb) {
       link['href'] = baseUrl + linkWeb

@@ -1,5 +1,13 @@
 <template>
-  <div class="login-container">
+  <div
+    v-if="showLoading"
+    v-loading="true"
+    :element-loading-text="t('qa.loading')"
+    class="xpack-login-handler-mask"
+    element-loading-background="#F5F6F7"
+  ></div>
+
+  <div class="login-container" :class="{ 'hide-login-container': showLoading }">
     <div class="login-left">
       <img :src="bg" alt="" />
     </div>
@@ -16,38 +24,46 @@
         </div>
         <div v-else class="welcome" style="height: 0"></div>
         <div class="login-form">
-          <h2 class="title">{{ $t('common.login') }}</h2>
-          <el-form
-            ref="loginFormRef"
-            class="form-content_error"
-            :model="loginForm"
-            :rules="rules"
-            @keyup.enter="submitForm"
-          >
-            <el-form-item prop="username">
-              <el-input
-                v-model="loginForm.username"
-                clearable
-                :placeholder="$t('common.your_account_email_address')"
-                size="large"
-              ></el-input>
-            </el-form-item>
-            <el-form-item prop="password">
-              <el-input
-                v-model="loginForm.password"
-                :placeholder="$t('common.enter_your_password')"
-                type="password"
-                show-password
-                clearable
-                size="large"
-              ></el-input>
-            </el-form-item>
-            <el-form-item>
-              <el-button type="primary" class="login-btn" @click="submitForm">{{
-                $t('common.login_')
-              }}</el-button>
-            </el-form-item>
-          </el-form>
+          <div class="default-login-tabs">
+            <h2 class="title">{{ $t('common.login') }}</h2>
+            <el-form
+              ref="loginFormRef"
+              class="form-content_error"
+              :model="loginForm"
+              :rules="rules"
+              @keyup.enter="submitForm"
+            >
+              <el-form-item prop="username">
+                <el-input
+                  v-model="loginForm.username"
+                  clearable
+                  :placeholder="$t('common.your_account_email_address')"
+                  size="large"
+                ></el-input>
+              </el-form-item>
+              <el-form-item prop="password">
+                <el-input
+                  v-model="loginForm.password"
+                  :placeholder="$t('common.enter_your_password')"
+                  type="password"
+                  show-password
+                  clearable
+                  size="large"
+                ></el-input>
+              </el-form-item>
+              <el-form-item>
+                <el-button type="primary" class="login-btn" @click="submitForm">{{
+                  $t('common.login_')
+                }}</el-button>
+              </el-form-item>
+            </el-form>
+          </div>
+          <Handler
+            ref="xpackLoginHandler"
+            v-model:loading="showLoading"
+            jsname="L2NvbXBvbmVudC9sb2dpbi9IYW5kbGVy"
+            @switch-tab="switchTab"
+          />
         </div>
       </div>
     </div>
@@ -64,17 +80,21 @@ import touxiang from '@/assets/logo/touxiang.png'
 import loginBgImage from '@/assets/logo/bg.png'
 import { useAppearanceStoreWithOut } from '@/stores/appearance'
 // import loginImage from '@/assets/blue/login-image_blue.png'
+import Handler from './xpack/Handler.vue'
 
+const showLoading = ref(true)
 const router = useRouter()
 const userStore = useUserStore()
 const appearanceStore = useAppearanceStoreWithOut()
 const { t } = useI18n()
-
+const xpackLoginHandler = ref<any>(null)
 const loginForm = ref({
   username: '',
   password: '',
 })
+const activeName = ref('simple')
 
+// const isLdap = computed(() => activeName.value == 'ldap')
 const bg = computed(() => {
   // 优先使用站点设置中配置的背景图，否则使用新的默认背景图
   return appearanceStore.getBg || loginBgImage
@@ -95,6 +115,9 @@ const submitForm = () => {
       })
     }
   })
+}
+const switchTab = (name: string) => {
+  activeName.value = name || 'simple'
 }
 </script>
 
@@ -189,8 +212,18 @@ const submitForm = () => {
     }
   }
 }
-
+.hide-login-container {
+  display: none;
+}
 :deep(.ed-input__wrapper) {
   background-color: #f5f7fa;
+}
+.xpack-login-handler-mask {
+  position: fixed;
+  width: 100vw;
+  height: 100vh;
+  left: 0;
+  top: 0;
+  z-index: 999;
 }
 </style>

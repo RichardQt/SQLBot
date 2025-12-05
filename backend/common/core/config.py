@@ -6,6 +6,7 @@ from pydantic import (
     BeforeValidator,
     PostgresDsn,
     computed_field,
+    field_validator
 )
 from pydantic_core import MultiHostUrl
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -63,7 +64,8 @@ class Settings(BaseSettings):
     LOG_DIR: str = "logs"
     LOG_FORMAT: str = "%(asctime)s - %(name)s - %(levelname)s:%(lineno)d - %(message)s"
     SQL_DEBUG: bool = False
-
+    BASE_DIR: str = "/opt/sqlbot"
+    SCRIPT_DIR: str = f"{BASE_DIR}/scripts"
     UPLOAD_DIR: str = "/opt/sqlbot/data/file"
     SQLBOT_KEY_EXPIRED: int = 100  # License key expiration timestamp, 0 means no expiration
 
@@ -111,6 +113,24 @@ class Settings(BaseSettings):
     TABLE_EMBEDDING_ENABLED: bool = True
     TABLE_EMBEDDING_COUNT: int = 10
     DS_EMBEDDING_COUNT: int = 10
+
+    @field_validator('SQL_DEBUG',
+                     'EMBEDDING_ENABLED',
+                     'GENERATE_SQL_QUERY_LIMIT_ENABLED',
+                     'PARSE_REASONING_BLOCK_ENABLED',
+                     'PG_POOL_PRE_PING',
+                     'TABLE_EMBEDDING_ENABLED',
+                     mode='before')
+    @classmethod
+    def lowercase_bool(cls, v: Any) -> Any:
+        """将字符串形式的布尔值转换为Python布尔值"""
+        if isinstance(v, str):
+            v_lower = v.lower().strip()
+            if v_lower == 'true':
+                return True
+            elif v_lower == 'false':
+                return False
+        return v
 
 
 settings = Settings()  # type: ignore

@@ -30,9 +30,9 @@ from apps.chat.curd.chat import save_question, save_sql_answer, save_sql, \
     save_select_datasource_answer, save_recommend_question_answer, \
     get_old_questions, save_analysis_predict_record, rename_chat, get_chart_config, \
     get_chat_chart_data, list_generate_sql_logs, list_generate_chart_logs, start_log, end_log, \
-    get_last_execute_sql_error
+    get_last_execute_sql_error, format_json_data, format_chart_fields, get_chat_brief_generate
 from apps.chat.models.chat_model import ChatQuestion, ChatRecord, Chat, RenameChat, ChatLog, OperationEnum, \
-    ChatFinishStep
+    ChatFinishStep, AxisObj
 from apps.chat.task.context_analyzer import ContextAnalyzer
 from apps.chat.task.question_completer import QuestionCompleter
 from apps.data_training.curd.data_training import get_training_template
@@ -50,6 +50,7 @@ from common.core.config import settings
 from common.core.db import engine
 from common.core.deps import CurrentAssistant, CurrentUser
 from common.error import SingleMessageError, SQLBotDBError, ParseSQLResultError, SQLBotDBConnectionError
+from common.utils.data_format import DataFormat
 from common.utils.utils import SQLBotLogUtil, extract_nested_json, prepare_for_orjson
 
 warnings.filterwarnings("ignore")
@@ -94,6 +95,7 @@ class LLMService:
     future: Future
 
     last_execute_sql_error: str = None
+    articles_number: int = 4
 
     def __init__(self, session: Session, current_user: CurrentUser, chat_question: ChatQuestion,
                  current_assistant: Optional[CurrentAssistant] = None, no_reasoning: bool = False,
@@ -126,7 +128,7 @@ class LLMService:
         self.generate_sql_logs = list_generate_sql_logs(session=session, chart_id=chat_id)
         self.generate_chart_logs = list_generate_chart_logs(session=session, chart_id=chat_id)
 
-        self.change_title = len(self.generate_sql_logs) == 0
+        self.change_title = not get_chat_brief_generate(session=session, chat_id=chat_id)
 
         chat_question.lang = get_lang_name(current_user.language)
 
@@ -313,24 +315,12 @@ class LLMService:
     def set_record(self, record: ChatRecord):
         self.record = record
 
+    def set_articles_number(self, articles_number: int):
+        self.articles_number = articles_number
+
     def get_fields_from_chart(self, _session: Session):
         chart_info = get_chart_config(_session, self.record.id)
-        fields = []
-        if chart_info.get('columns') and len(chart_info.get('columns')) > 0:
-            for column in chart_info.get('columns'):
-                column_str = column.get('value')
-                if column.get('value') != column.get('name'):
-                    column_str = column_str + '(' + column.get('name') + ')'
-                fields.append(column_str)
-        if chart_info.get('axis'):
-            for _type in ['x', 'y', 'series']:
-                if chart_info.get('axis').get(_type):
-                    column = chart_info.get('axis').get(_type)
-                    column_str = column.get('value')
-                    if column.get('value') != column.get('name'):
-                        column_str = column_str + '(' + column.get('name') + ')'
-                    fields.append(column_str)
-        return fields
+        return format_chart_fields(chart_info)
 
     def generate_analysis(self, _session: Session):
         fields = self.get_fields_from_chart(_session)
@@ -445,7 +435,7 @@ class LLMService:
                 embedding=False)
 
         guess_msg: List[Union[BaseMessage, dict[str, Any]]] = []
-        guess_msg.append(SystemMessage(content=self.chat_question.guess_sys_question()))
+        guess_msg.append(SystemMessage(content=self.chat_question.guess_sys_question(self.articles_number)))
 
         old_questions = list(map(lambda q: q.strip(), get_old_questions(_session, self.record.datasource)))
         guess_msg.append(
@@ -515,7 +505,7 @@ class LLMService:
             if settings.TABLE_EMBEDDING_ENABLED and (
                     not self.current_assistant or (self.current_assistant and self.current_assistant.type != 1)):
                 _ds_list = get_ds_embedding(_session, self.current_user, _ds_list, self.out_ds_instance,
-                                      self.chat_question.question, self.current_assistant)
+                                            self.chat_question.question, self.current_assistant)
                 # yield {'content': '{"id":' + str(ds.get('id')) + '}'}
 
             _ds_list_dict = []
@@ -621,8 +611,12 @@ class LLMService:
 
             self.chat_question.terminologies = get_terminology_template(_session, self.chat_question.question, oid,
                                                                         ds_id)
-            self.chat_question.data_training = get_training_template(_session, self.chat_question.question, ds_id,
-                                                                     oid)
+            if self.current_assistant and self.current_assistant.type == 1:
+                self.chat_question.data_training = get_training_template(_session, self.chat_question.question,
+                                                                         oid, None, self.current_assistant.id)
+            else:
+                self.chat_question.data_training = get_training_template(_session, self.chat_question.question,
+                                                                         oid, ds_id)
             if SQLBotLicenseUtil.valid():
                 self.chat_question.custom_prompt = find_custom_prompts(_session, CustomPromptTypeEnum.GENERATE_SQL,
                                                                        oid, ds_id)
@@ -635,7 +629,8 @@ class LLMService:
     def generate_sql(self, _session: Session):
         # append current question
         self.sql_message.append(HumanMessage(
-            self.chat_question.sql_user_question(current_time=datetime.now().strftime('%Y-%m-%d %H:%M:%S'))))
+            self.chat_question.sql_user_question(current_time=datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                                                 change_title=self.change_title)))
 
         self.current_logs[OperationEnum.GENERATE_SQL] = start_log(session=_session,
                                                                   ai_modal_id=self.chat_question.ai_modal_id,
@@ -867,6 +862,26 @@ class LLMService:
 
         return chart_type
 
+    @staticmethod
+    def get_brief_from_sql_answer(res: str) -> Optional[str]:
+        json_str = extract_nested_json(res)
+        if json_str is None:
+            return None
+
+        brief: Optional[str]
+        data: dict
+        try:
+            data = orjson.loads(json_str)
+
+            if data['success']:
+                brief = data['brief']
+            else:
+                return None
+        except Exception:
+            return None
+
+        return brief
+
     def check_save_sql(self, session: Session, res: str) -> str:
         sql, *_ = self.check_sql(res=res)
         save_sql(session=session, sql=sql, record_id=self.record.id)
@@ -942,7 +957,7 @@ class LLMService:
             limit = 1000
             if data_result:
                 data_result = prepare_for_orjson(data_result)
-                if data_result and len(data_result) > limit:
+                if data_result and len(data_result) > limit and settings.GENERATE_SQL_QUERY_LIMIT_ENABLED:
                     data_obj['data'] = data_result[:limit]
                     data_obj['limit'] = limit
                 else:
@@ -1122,8 +1137,12 @@ class LLMService:
                 ds_id = self.ds.id if isinstance(self.ds, CoreDatasource) else None
                 self.chat_question.terminologies = get_terminology_template(_session, self.chat_question.question,
                                                                             oid, ds_id)
-                self.chat_question.data_training = get_training_template(_session, self.chat_question.question,
-                                                                         ds_id, oid)
+                if self.current_assistant and self.current_assistant.type == 1:
+                    self.chat_question.data_training = get_training_template(_session, self.chat_question.question,
+                                                                             oid, None, self.current_assistant.id)
+                else:
+                    self.chat_question.data_training = get_training_template(_session, self.chat_question.question,
+                                                                             oid, ds_id)
                 if SQLBotLicenseUtil.valid():
                     self.chat_question.custom_prompt = find_custom_prompts(_session,
                                                                            CustomPromptTypeEnum.GENERATE_SQL,
@@ -1160,17 +1179,6 @@ class LLMService:
                 yield 'data:' + orjson.dumps({'type': 'id', 'id': self.get_record().id}).decode() + '\n\n'
             if not stream:
                 json_result['record_id'] = self.get_record().id
-
-            # return title
-            if self.change_title:
-                if self.chat_question.question or self.chat_question.question.strip() != '':
-                    brief = rename_chat(session=_session,
-                                        rename_object=RenameChat(id=self.get_record().chat_id,
-                                                                 brief=self.chat_question.question.strip()[:20]))
-                    if in_chat:
-                        yield 'data:' + orjson.dumps({'type': 'brief', 'brief': brief}).decode() + '\n\n'
-                    if not stream:
-                        json_result['title'] = brief
 
             # 步骤2: 选择数据源 - 开始
             if in_chat:
@@ -1244,6 +1252,21 @@ class LLMService:
 
             chart_type = self.get_chart_type_from_sql_answer(full_sql_text)
 
+            # return title
+            if self.change_title:
+                llm_brief = self.get_brief_from_sql_answer(full_sql_text)
+                llm_brief_generated = bool(llm_brief)
+                if llm_brief_generated or (self.chat_question.question and self.chat_question.question.strip() != ''):
+                    save_brief = llm_brief if (llm_brief and llm_brief != '') else self.chat_question.question.strip()[
+                                                                                   :20]
+                    brief = rename_chat(session=_session,
+                                        rename_object=RenameChat(id=self.get_record().chat_id,
+                                                                 brief=save_brief, brief_generate=llm_brief_generated))
+                    if in_chat:
+                        yield 'data:' + orjson.dumps({'type': 'brief', 'brief': brief}).decode() + '\n\n'
+                    if not stream:
+                        json_result['title'] = brief
+
             use_dynamic_ds: bool = self.current_assistant and self.current_assistant.type in dynamic_ds_types
             is_page_embedded: bool = self.current_assistant and self.current_assistant.type == 4
             dynamic_sql_result = None
@@ -1306,6 +1329,10 @@ class LLMService:
                 yield emit_step_start(5, '正在执行SQL查询...')
 
             result = self.execute_sql(sql=real_execute_sql)
+
+            _data = DataFormat.convert_large_numbers_in_object_array(result.get('data'))
+            result["data"] = _data
+
             self.save_sql_data(session=_session, data_obj=result)
 
             # 步骤5: 执行查询 - 完成
@@ -1330,30 +1357,28 @@ class LLMService:
             if in_chat:
                 yield 'data:' + orjson.dumps({'content': 'execute-success', 'type': 'sql-data'}).decode() + '\n\n'
             if not stream:
-                json_result['data'] = result.get('data')
+                json_result['data'] = get_chat_chart_data(_session, self.record.id)
 
             if finish_step.value <= ChatFinishStep.QUERY_DATA.value:
                 if stream:
                     if in_chat:
                         yield 'data:' + orjson.dumps({'type': 'finish'}).decode() + '\n\n'
                     else:
-                        data = []
-                        _fields_list = []
-                        _fields_skip = False
-                        for _data in result.get('data'):
-                            _row = []
-                            for field in result.get('fields'):
-                                _row.append(_data.get(field))
-                                if not _fields_skip:
-                                    _fields_list.append(field)
-                            data.append(_row)
-                            _fields_skip = True
+                        _column_list = []
+                        for field in result.get('fields'):
+                            _column_list.append(AxisObj(name=field, value=field))
 
-                        if not data or not _fields_list:
+                        md_data, _fields_list = DataFormat.convert_object_array_for_pandas(_column_list,
+                                                                                           result.get('data'))
+
+                        # data, _fields_list, col_formats = self.format_pd_data(_column_list, result.get('data'))
+
+                        if not _data or not _fields_list:
                             yield 'The SQL execution result is empty.\n\n'
                         else:
-                            df = pd.DataFrame(data, columns=_fields_list)
-                            markdown_table = df.to_markdown(index=False)
+                            df = pd.DataFrame(_data, columns=_fields_list)
+                            df_safe = DataFormat.safe_convert_to_string(df)
+                            markdown_table = df_safe.to_markdown(index=False)
                             yield markdown_table + '\n\n'
                 else:
                     yield json_result
@@ -1393,7 +1418,6 @@ class LLMService:
                     {'content': orjson.dumps(chart).decode(), 'type': 'chart'}).decode() + '\n\n'
             else:
                 if stream:
-                    data = []
                     _fields = {}
                     if chart.get('columns'):
                         for _column in chart.get('columns'):
@@ -1407,22 +1431,21 @@ class LLMService:
                         if chart.get('axis').get('series'):
                             _fields[chart.get('axis').get('series').get('value')] = chart.get('axis').get('series').get(
                                 'name')
-                    _fields_list = []
-                    _fields_skip = False
-                    for _data in result.get('data'):
-                        _row = []
-                        for field in result.get('fields'):
-                            _row.append(_data.get(field))
-                            if not _fields_skip:
-                                _fields_list.append(field if not _fields.get(field) else _fields.get(field))
-                        data.append(_row)
-                        _fields_skip = True
+                    _column_list = []
+                    for field in result.get('fields'):
+                        _column_list.append(
+                            AxisObj(name=field if not _fields.get(field) else _fields.get(field), value=field))
 
-                    if not data or not _fields_list:
+                    md_data, _fields_list = DataFormat.convert_object_array_for_pandas(_column_list, result.get('data'))
+
+                    # data, _fields_list, col_formats = self.format_pd_data(_column_list, result.get('data'))
+
+                    if not md_data or not _fields_list:
                         yield 'The SQL execution result is empty.\n\n'
                     else:
-                        df = pd.DataFrame(data, columns=_fields_list)
-                        markdown_table = df.to_markdown(index=False)
+                        df = pd.DataFrame(md_data, columns=_fields_list)
+                        df_safe = DataFormat.safe_convert_to_string(df)
+                        markdown_table = df_safe.to_markdown(index=False)
                         yield markdown_table + '\n\n'
 
             if in_chat:
@@ -1435,14 +1458,19 @@ class LLMService:
                 yield 'data:' + orjson.dumps(finish_data).decode() + '\n\n'
             else:
                 # todo generate picture
-                if chart['type'] != 'table':
-                    yield '### generated chart picture\n\n'
-                    image_url = request_picture(self.record.chat_id, self.record.id, chart, result)
-                    SQLBotLogUtil.info(image_url)
+                try:
+                    if chart['type'] != 'table':
+                        yield '### generated chart picture\n\n'
+                        image_url = request_picture(self.record.chat_id, self.record.id, chart,
+                                                    format_json_data(result))
+                        SQLBotLogUtil.info(image_url)
+                        if stream:
+                            yield f'![{chart["type"]}]({image_url})'
+                        else:
+                            json_result['image_url'] = image_url
+                except Exception as e:
                     if stream:
-                        yield f'![{chart["type"]}]({image_url})'
-                    else:
-                        json_result['image_url'] = image_url
+                        raise e
 
             if not stream:
                 yield json_result

@@ -19,8 +19,11 @@ interface ProcessingStep {
   durationMs?: number
 }
 
+import JSONBig from 'json-bigint'
+
 const props = withDefaults(
   defineProps<{
+    recordId?: number
     chatList?: Array<ChatInfo>
     currentChatId?: number
     currentChat?: ChatInfo
@@ -29,6 +32,7 @@ const props = withDefaults(
     reasoningName: 'sql_answer' | 'chart_answer' | Array<'sql_answer' | 'chart_answer'>
   }>(),
   {
+    recordId: undefined,
     chatList: () => [],
     currentChatId: undefined,
     currentChat: () => new ChatInfo(),
@@ -374,7 +378,7 @@ const sendMessage = async () => {
           for (const str of split) {
             let data
             try {
-              data = JSON.parse(str.replace('data:{', '{'))
+              data = JSONBig.parse(str.replace('data:{', '{'))
             } catch (err) {
               console.error('JSON string:', str)
               throw err
@@ -472,6 +476,11 @@ const sendMessage = async () => {
                 }
                 break
               }
+              case 'datasource':
+                if (!_currentChat.value.datasource) {
+                  _currentChat.value.datasource = data.id
+                }
+                break
               case 'finish':
                 // Update log IDs for feedback feature
                 if (data.sql_log_id) {
@@ -507,7 +516,10 @@ const sendMessage = async () => {
   }
 }
 
+const loadingData = ref(false)
+
 function getChatData(recordId?: number) {
+  loadingData.value = true
   chatApi
     .get_chart_data(recordId)
     .then((response) => {
@@ -538,9 +550,11 @@ function getChatData(recordId?: number) {
       console.error('获取查询数据失败:', error)
     })
     .finally(() => {
+      loadingData.value = false
       emits('scrollBottom')
     })
 }
+
 function stop() {
   stopFlag.value = true
   _loading.value = false
@@ -572,7 +586,12 @@ defineExpose({ sendMessage, index: () => index.value, stop })
       style="margin-bottom: 16px"
     />
 
-    <ChartBlock style="margin-top: 6px" :message="message" />
+    <ChartBlock
+      style="margin-top: 6px"
+      :message="message"
+      :record-id="recordId"
+      :loading-data="loadingData"
+    />
     <slot></slot>
     <template #tool>
       <slot name="tool"></slot>

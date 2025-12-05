@@ -7,7 +7,25 @@
     "AI Model Configuration": "AI Model Configuration",
     "Details": "Details"
   },
+  "parameter": {
+    "parameter_configuration": "Parameter Configuration",
+    "question_count_settings": "Question Count Settings",
+    "model_thinking_process": "Expand Model Thinking Process",
+    "rows_of_data": "Limit 1000 Rows of Data",
+    "third_party_platform_settings": "Third-Party Platform Settings",
+    "by_third_party_platform": "Automatic User Creation by Third-Party Platform",
+    "platform_user_organization": "Third-Party Platform User Organization",
+    "platform_user_roles": "Third-Party Platform User Roles",
+    "excessive_data_volume": "Disabling the 1000-row data limit may cause system lag due to excessive data volume.",
+    "prompt": "Prompt",
+    "disabling_successfully": "Disabling Successfully",
+    "closed_by_default": "In the Question Count window, control whether the model thinking process is expanded or closed by default.",
+    "and_platform_integration": "Scope includes authentication settings and platform integration."
+  },
   "prompt": {
+    "default_password": "Default password:{msg}",
+    "no_sql_sample": "No SQL sample currently available",
+    "add_sql_sample": "Add SQL sample",
     "no_prompt_words": "No prompt words",
     "customize_prompt_words": "Customize prompt words",
     "ask_sql": "Ask SQL",
@@ -21,7 +39,11 @@
     "replaced_with": "Please enter a prompt word. Example: When returning names, only the last name will be displayed, and the first name will be replaced with *.",
     "loss_exercise_caution": "Entering high-risk operations such as deleting a database or table or modifying the table structure may result in permanent data loss. Exercise caution!",
     "edit_prompt_word": "Edit prompt word",
-    "prompt_word_name_de": "Do you want to delete the prompt word: {msg}?"
+    "all_236_terms": "Export all {msg} {type} prompt records?",
+    "export_hint": "Export all {type} prompts?",
+    "prompt_word_name_de": "Do you want to delete the prompt word: {msg}?",
+    "disable_field": "Disable Field",
+    "to_disable_it": "This field has a configured table relationship. If disabled, the relationship will be invalid. Are you sure you want to disable it?"
   },
   "training": {
     "effective_data_sources": "Effective data sources",
@@ -29,7 +51,7 @@
     "partial_data_sources": "Partial data sources",
     "add_it_here": "Drag the table name on the left to add it here",
     "table_relationship_management": "Table relationship management",
-    "system_anagement": "System Management",
+    "system_management": "System Management",
     "data_training": "SQL Sample Lib",
     "problem_description": "Problem Description",
     "sample_sql": "Sample SQL",
@@ -39,7 +61,11 @@
     "training_data_items": "Do you want to delete the {msg} selected SQL Sample items?",
     "sql_statement": "SQL Statement",
     "edit_training_data": "Edit SQL Sample",
-    "sales_this_year": "Do you want to delete the SQL Sample: {msg}?"
+    "all_236_terms": "Export all {msg} sample SQL records?",
+    "export_hint": "Export all sample SQL?",
+    "sales_this_year": "Do you want to delete the SQL Sample: {msg}?",
+    "upload_success": "Import Successful",
+    "upload_failed": "Import successful: {success} records. Failed: {fail} records. For details, see: {fail_info}"
   },
   "professional": {
     "cannot_be_repeated": "Term name, synonyms cannot be repeated",
@@ -57,12 +83,14 @@
     "business_term": "Business Term",
     "synonyms": "Synonyms",
     "all_236_terms": "Export all {msg} terms?",
+    "export_hint": "Export all terms?",
     "export": "Export",
     "selected_2_terms": "Delete the selected {msg} terms?",
     "selected_2_terms_de": "Export the selected {msg} terms?",
     "the_term_gmv": "Delete the term: {msg}?"
   },
   "common": {
+    "require": "Required",
     "zoom_in": "Zoom in",
     "zoom_out": "Zoom out",
     "the_default_model": "Already the default model",
@@ -106,10 +134,17 @@
     "english": "English",
     "re_upload": "Re-upload",
     "not_exceed_50mb": "Supports XLS, XLSX, CSV formats, file size does not exceed 50MB",
+    "excel_file_type_limit": "Only XLS and XLSX formats are supported",
+    "click_to_select_file": "Click to select file",
+    "upload_hint_first": "Please ",
+    "upload_hint_download_template": "download the template",
+    "upload_hint_end": " first, then upload after filling it out as required",
+    "continue_to_upload": "Continue to import",
     "reset_password": "Reset password",
     "password_reset_successful": "Password reset successful",
     "or": "Or",
-    "refresh": "Refresh"
+    "refresh": "Refresh",
+    "input_limit": "Length cannot exceed {0} characters"
   },
   "dashboard": {
     "open_dashboard": "Open Dashboard",
@@ -173,6 +208,11 @@
     "chart_selected": "Selected {0}"
   },
   "qa": {
+    "retrieve_error": "No content available",
+    "retrieve_again": "Retrieve Again",
+    "recently": "recently",
+    "recommend": "recommend",
+    "quick_question": "quick question",
     "new_chat": "New Chat",
     "start_sqlbot": "New Chat",
     "title": "Data Q&A",
@@ -298,6 +338,14 @@
     }
   },
   "datasource": {
+    "recommended_repetitive_tips": "Duplicate questions exist",
+    "recommended_problem_tips": "Custom configuration requires at least one problem, each problem should be 2-200 characters",
+    "recommended_problem_configuration": "Recommended Problem Configuration",
+    "problem_generation_method": "Problem Generation Method",
+    "ai_automatic_generation": "AI Automatic Generation",
+    "user_defined": "User Defined",
+    "question_tips": "Please enter recommended questions",
+    "add_question": "Add Question",
     "data_source_yet": "No data source yet",
     "search_by_name": "Search by Name",
     "search": "Search",
@@ -549,7 +597,7 @@
     "application_name": "Application name",
     "application_description": "Application description",
     "cross_domain_settings": "Cross-domain settings",
-    "third_party_address": "Please enter the embedded third party address",
+    "third_party_address": "Please enter the embedded third party address,multiple items separated by semicolons",
     "set_to_private": "Set as private",
     "set_to_public": "Set as public",
     "public": "Public",
@@ -557,7 +605,9 @@
     "creating_advanced_applications": "Creating Advanced Applications",
     "configure_interface": "Configure interface",
     "interface_url": "Interface URL",
-    "format_is_incorrect": "format is incorrect",
+    "format_is_incorrect": "format is incorrect{msg}",
+    "domain_format_incorrect": ", start with http:// or https://, no trailing slash (/), multiple domains separated by semicolons",
+    "interface_url_incorrect": ",enter a relative path starting with /",
     "aes_enable": "Enable AES encryption",
     "aes_enable_tips": "The fields (host, user, password, dataBase, schema) are all encrypted using the AES-CBC-PKCS5Padding encryption method",
     "bit": "bit",
@@ -636,6 +686,7 @@
     "error": "Error",
     "exec-sql-err": "Execute SQL failed",
     "no_data": "No Data",
+    "loading_data": "Loading ...",
     "show_error_detail": "Show error info"
   },
   "about": {
@@ -666,6 +717,7 @@
   "system": {
     "system_settings": "System Settings",
     "appearance_settings": "Appearance Settings",
+    "authentication_settings": "Authentication Settings",
     "platform_display_theme": "Platform Display Theme",
     "default_turquoise": "Default (Turquoise)",
     "tech_blue": "Tech Blue",
@@ -694,5 +746,75 @@
     "save_and_apply": "Save and Apply",
     "setting_successfully": "Setting Successfully",
     "customize_theme_color": "Customize theme color"
+  },
+  "authentication": {
+    "invalid": "Invalid",
+    "valid": "Valid",
+    "cas_settings": "CAS Settings",
+    "callback_domain_name": "Callback Domain",
+    "callback_domain_name_error": "Callback URL must match the current access domain",
+    "field_mapping": "User Attribute Mapping",
+    "field_mapping_placeholder": "Example: {'{'}\"account\": \"saml2Account\", \"name\": \"saml2Name\", \"email\": \"email\"{'}'}",
+    "incorrect_please_re_enter": "Incorrect format, please re-enter",
+    "in_json_format": "Please enter JSON format",
+    "authorize_url": "Authorization URL",
+    "client_id": "Client ID",
+    "client_secret": "Client Secret",
+    "redirect_url": "Redirect URL",
+    "logout_redirect_url": "Logout Redirect URL",
+    "logout_redirect_url_placeholder": "By default, users will be redirected to the SQLBot login page after logout. You can customize the redirect address here.",
+    "oauth2_settings": "OAuth2 Settings",
+    "scope": "Scope",
+    "userinfo_url": "User Info URL",
+    "token_url": "Token URL",
+    "revoke_url": "Revocation URL",
+    "oauth2_field_mapping_placeholder": "Example: {'{'}\"account\": \"OAuth2Account\", \"name\": \"OAuth2Name\", \"email\": \"email\"{'}'}",
+    "token_auth_method": "Token auth method",
+    "userinfo_auth_method": "Userinfo auth method",
+    "oidc_settings": "OIDC Settings",
+    "metadata_url": "Metadata URL",
+    "realm": "Realm",
+    "oidc_field_mapping_placeholder": "e.g., {\"account\": \"oidcAccount\", \"name\": \"oidcName\", \"email\": \"email\"}",
+    "ldap_settings": "LDAP Settings",
+    "server_address": "Server Address",
+    "server_address_placeholder": "Example: ldap://ldap.example.com:389",
+    "bind_dn": "Bind DN",
+    "bind_dn_placeholder": "Example: cn=admin,dc=example,dc=com",
+    "bind_pwd": "Bind Password",
+    "ou": "User OU",
+    "ou_placeholder": "Example: ou=users,dc=example,dc=com",
+    "user_filter": "User Filter",
+    "user_filter_placeholder": "Example: uid",
+    "ldap_field_mapping_placeholder": "Example: {\"account\": \"ldapAccount\", \"name\": \"ldapName\", \"email\": \"mail\"}",
+    "be_turned_on": "Once the test connection is confirmed to be effective, it can be enabled"
+  },
+  "login": {
+    "default_login": "Default",
+    "ldap_login": "LDAP Login",
+    "account_login": "Account Login",
+    "other_login": "Other Login Methods",
+    "pwd_invalid_error": "Password has expired, please contact administrator to modify or reset",
+    "pwd_exp_tips": "Password will expire in {0} days, please change it as soon as possible",
+    "qr_code": "QR Code",
+    "platform_disable": "{0} settings are not enabled!",
+    "input_account": "Please enter account",
+    "redirect_2_auth": "Redirecting to {0} authentication, {1} seconds...",
+    "redirect_immediately": "Redirecting immediately"
+  },
+  "supplier": {
+    "alibaba_cloud_bailian": "Alibaba Cloud Bailian",
+    "qianfan_model": "Qianfan Model",
+    "deepseek": "DeepSeek",
+    "tencent_hunyuan": "Tencent Hunyuan",
+    "iflytek_spark": "iFlytek Spark",
+    "gemini": "Gemini",
+    "openai": "OpenAI",
+    "kimi": "Kimi",
+    "tencent_cloud": "Tencent Cloud",
+    "volcano_engine": "Volcano Engine",
+    "generic_openai": "Generic OpenAI"
+  },
+  "modelType": {
+    "llm": "Large Language Model"
   }
 }

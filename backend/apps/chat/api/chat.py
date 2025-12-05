@@ -1,6 +1,7 @@
 import asyncio
 import io
 import traceback
+from typing import Optional
 
 import orjson
 import pandas as pd
@@ -10,10 +11,11 @@ from sqlalchemy import and_, select
 
 from apps.chat.curd.chat import list_chats, get_chat_with_records, create_chat, rename_chat, \
     delete_chat, get_chat_chart_data, get_chat_predict_data, get_chat_with_records_with_data, get_chat_record_by_id, \
-    format_json_data, format_json_list_data, update_chat_log_feedback, update_multi_turn_setting
-from apps.chat.models.chat_model import CreateChat, ChatRecord, RenameChat, ChatQuestion, ExcelData, UpdateMultiTurn
+    format_json_data, format_json_list_data, update_chat_log_feedback, update_multi_turn_setting, get_chart_config, list_recent_questions
+from apps.chat.models.chat_model import CreateChat, ChatRecord, RenameChat, ChatQuestion, AxisObj, UpdateMultiTurn
 from apps.chat.task.llm import LLMService
 from common.core.deps import CurrentAssistant, SessionDep, CurrentUser, Trans
+from common.utils.data_format import DataFormat
 
 router = APIRouter(tags=["Data Q&A"], prefix="/chat")
 
@@ -24,10 +26,11 @@ async def chats(session: SessionDep, current_user: CurrentUser):
 
 
 @router.get("/{chart_id}")
-async def get_chat(session: SessionDep, current_user: CurrentUser, chart_id: int, current_assistant: CurrentAssistant):
+async def get_chat(session: SessionDep, current_user: CurrentUser, chart_id: int, current_assistant: CurrentAssistant,
+                   trans: Trans):
     def inner():
         return get_chat_with_records(chart_id=chart_id, session=session, current_user=current_user,
-                                     current_assistant=current_assistant)
+                                     current_assistant=current_assistant, trans=trans)
 
     return await asyncio.to_thread(inner)
 
@@ -42,19 +45,19 @@ async def get_chat_with_data(session: SessionDep, current_user: CurrentUser, cha
     return await asyncio.to_thread(inner)
 
 
-@router.get("/record/{chart_record_id}/data")
-async def chat_record_data(session: SessionDep, chart_record_id: int):
+@router.get("/record/{chat_record_id}/data")
+async def chat_record_data(session: SessionDep, chat_record_id: int):
     def inner():
-        data = get_chat_chart_data(chart_record_id=chart_record_id, session=session)
+        data = get_chat_chart_data(chat_record_id=chat_record_id, session=session)
         return format_json_data(data)
 
     return await asyncio.to_thread(inner)
 
 
-@router.get("/record/{chart_record_id}/predict_data")
-async def chat_predict_data(session: SessionDep, chart_record_id: int):
+@router.get("/record/{chat_record_id}/predict_data")
+async def chat_predict_data(session: SessionDep, chat_record_id: int):
     def inner():
-        data = get_chat_predict_data(chart_record_id=chart_record_id, session=session)
+        data = get_chat_predict_data(chat_record_id=chat_record_id, session=session)
         return format_json_list_data(data)
 
     return await asyncio.to_thread(inner)
@@ -106,7 +109,7 @@ async def start_chat(session: SessionDep, current_user: CurrentUser):
 
 @router.post("/recommend_questions/{chat_record_id}")
 async def recommend_questions(session: SessionDep, current_user: CurrentUser, chat_record_id: int,
-                              current_assistant: CurrentAssistant):
+                              current_assistant: CurrentAssistant, articles_number: Optional[int] = 4):
     def _return_empty():
         yield 'data:' + orjson.dumps({'content': '[]', 'type': 'recommended_question'}).decode() + '\n\n'
 
@@ -120,6 +123,7 @@ async def recommend_questions(session: SessionDep, current_user: CurrentUser, ch
 
         llm_service = await LLMService.create(session, current_user, request_question, current_assistant, True)
         llm_service.set_record(record)
+        llm_service.set_articles_number(articles_number)
         llm_service.run_recommend_questions_task_async()
     except Exception as e:
         traceback.print_exc()
@@ -130,6 +134,11 @@ async def recommend_questions(session: SessionDep, current_user: CurrentUser, ch
         return StreamingResponse(_err(e), media_type="text/event-stream")
 
     return StreamingResponse(llm_service.await_result(), media_type="text/event-stream")
+
+
+@router.get("/recent_questions/{datasource_id}")
+async def recommend_questions(session: SessionDep, current_user: CurrentUser, datasource_id: int):
+    return list_recent_questions(session=session, current_user=current_user, datasource_id=datasource_id)
 
 
 @router.post("/question")
@@ -203,47 +212,55 @@ async def analysis_or_predict(session: SessionDep, current_user: CurrentUser, ch
     return StreamingResponse(llm_service.await_result(), media_type="text/event-stream")
 
 
-@router.post("/excel/export")
-async def export_excel(excel_data: ExcelData, trans: Trans):
+@router.get("/record/{chat_record_id}/excel/export")
+async def export_excel(session: SessionDep, chat_record_id: int, trans: Trans):
+    chat_record = session.get(ChatRecord, chat_record_id)
+    if not chat_record:
+        raise HTTPException(
+            status_code=500,
+            detail=f"ChatRecord with id {chat_record_id} not found"
+        )
+
+    is_predict_data = chat_record.predict_record_id is not None
+
+    _origin_data = format_json_data(get_chat_chart_data(chat_record_id=chat_record_id, session=session))
+
+    _base_field = _origin_data.get('fields')
+    _data = _origin_data.get('data')
+
+    if not _data:
+        raise HTTPException(
+            status_code=500,
+            detail=trans("i18n_excel_export.data_is_empty")
+        )
+
+    chart_info = get_chart_config(session, chat_record_id)
+
+    _title = chart_info.get('title') if chart_info.get('title') else 'Excel'
+
+    fields = []
+    if chart_info.get('columns') and len(chart_info.get('columns')) > 0:
+        for column in chart_info.get('columns'):
+            fields.append(AxisObj(name=column.get('name'), value=column.get('value')))
+    if chart_info.get('axis'):
+        for _type in ['x', 'y', 'series']:
+            if chart_info.get('axis').get(_type):
+                column = chart_info.get('axis').get(_type)
+                fields.append(AxisObj(name=column.get('name'), value=column.get('value')))
+
+    _predict_data = []
+    if is_predict_data:
+        _predict_data = format_json_list_data(get_chat_predict_data(chat_record_id=chat_record_id, session=session))
+
     def inner():
-        _fields_list = []
-        data = []
-        if not excel_data.data:
-            raise HTTPException(
-                status_code=500,
-                detail=trans("i18n_excel_export.data_is_empty")
-            )
 
-        # 预处理数据并记录每列的格式类型
-        col_formats = {}  # 格式类型：'text'（文本）、'number'（数字）、'default'（默认）
-        for field_idx, field in enumerate(excel_data.axis):
-            _fields_list.append(field.name)
-            col_formats[field_idx] = 'default'  # 默认不特殊处理
+        data_list = DataFormat.convert_large_numbers_in_object_array(_data + _predict_data)
 
-        for _data in excel_data.data:
-            _row = []
-            for field_idx, field in enumerate(excel_data.axis):
-                value = _data.get(field.value)
-                if value is not None:
-                    # 检查是否为数字且需要特殊处理
-                    if isinstance(value, (int, float)):
-                        # 整数且超过15位 → 转字符串并标记为文本列
-                        if isinstance(value, int) and len(str(abs(value))) > 15:
-                            value = str(value)
-                            col_formats[field_idx] = 'text'
-                        # 小数且超过15位有效数字 → 转字符串并标记为文本列
-                        elif isinstance(value, float):
-                            decimal_str = format(value, '.16f').rstrip('0').rstrip('.')
-                            if len(decimal_str) > 15:
-                                value = str(value)
-                                col_formats[field_idx] = 'text'
-                        # 其他数字列标记为数字格式（避免科学记数法）
-                        elif col_formats[field_idx] != 'text':
-                            col_formats[field_idx] = 'number'
-                _row.append(value)
-            data.append(_row)
+        md_data, _fields_list = DataFormat.convert_object_array_for_pandas(fields, data_list)
 
-        df = pd.DataFrame(data, columns=_fields_list)
+        # data, _fields_list, col_formats = LLMService.format_pd_data(fields, _data + _predict_data)
+
+        df = pd.DataFrame(md_data, columns=_fields_list)
 
         buffer = io.BytesIO()
 
@@ -252,14 +269,14 @@ async def export_excel(excel_data: ExcelData, trans: Trans):
             df.to_excel(writer, sheet_name='Sheet1', index=False)
 
             # 获取 xlsxwriter 的工作簿和工作表对象
-            workbook = writer.book
-            worksheet = writer.sheets['Sheet1']
-
-            for col_idx, fmt_type in col_formats.items():
-                if fmt_type == 'text':
-                    worksheet.set_column(col_idx, col_idx, None, workbook.add_format({'num_format': '@'}))
-                elif fmt_type == 'number':
-                    worksheet.set_column(col_idx, col_idx, None, workbook.add_format({'num_format': '0'}))
+            # workbook = writer.book
+            # worksheet = writer.sheets['Sheet1']
+            #
+            # for col_idx, fmt_type in col_formats.items():
+            #     if fmt_type == 'text':
+            #         worksheet.set_column(col_idx, col_idx, None, workbook.add_format({'num_format': '@'}))
+            #     elif fmt_type == 'number':
+            #         worksheet.set_column(col_idx, col_idx, None, workbook.add_format({'num_format': '0'}))
 
         buffer.seek(0)
         return io.BytesIO(buffer.getvalue())

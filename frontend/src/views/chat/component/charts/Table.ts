@@ -22,6 +22,9 @@ const CENTER_ALIGN_THEME: ThemeCfg = {
     },
   },
 }
+import { i18n } from '@/i18n'
+
+const { t } = i18n.global
 
 export class Table extends BaseChart {
   table?: TableSheet = undefined
@@ -85,6 +88,15 @@ export class Table extends BaseChart {
     if (this.container) {
       this.table = new TableSheet(this.container, s2DataConfig, s2Options)
       this.table.setThemeCfg(CENTER_ALIGN_THEME)
+      // right click
+      this.table.on(S2Event.GLOBAL_COPIED, (data) => {
+        ElMessage.success(t('qa.copied'))
+        console.debug('copied: ', data)
+      })
+      this.table.getCanvasElement().addEventListener('contextmenu', (event) => {
+        event.preventDefault()
+      })
+      this.table.on(S2Event.GLOBAL_CONTEXT_MENU, (event) => copyData(event, this.table))
     }
   }
 
@@ -95,5 +107,63 @@ export class Table extends BaseChart {
   destroy() {
     this.table?.destroy()
     this.resizeObserver?.disconnect()
+  }
+}
+
+function copyData(event: any, s2?: TableSheet) {
+  event.preventDefault()
+  if (!s2) {
+    return
+  }
+  const cells = s2.interaction.getCells()
+
+  if (cells.length == 0) {
+    return
+  } else if (cells.length == 1) {
+    const c = cells[0]
+    const cellMeta = s2.facet.getCellMeta(c.rowIndex, c.colIndex)
+    if (cellMeta) {
+      let value = cellMeta.fieldValue
+      if (value === null || value === undefined) {
+        value = '-'
+      }
+      value = value + ''
+      copyToClipboard(value).finally(() => {
+        ElMessage.success(t('qa.copied'))
+        console.debug('copied:', cellMeta.fieldValue)
+      })
+    }
+    return
+  } else {
+    let currentRowIndex = -1
+    let currentRowData: Array<string> = []
+    const rowData: Array<string> = []
+    for (let i = 0; i < cells.length; i++) {
+      const c = cells[i]
+      const cellMeta = s2.facet.getCellMeta(c.rowIndex, c.colIndex)
+      if (!cellMeta) {
+        continue
+      }
+      if (currentRowIndex == -1) {
+        currentRowIndex = c.rowIndex
+      }
+      if (c.rowIndex !== currentRowIndex) {
+        rowData.push(currentRowData.join('\t'))
+        currentRowData = []
+        currentRowIndex = c.rowIndex
+      }
+      let value = cellMeta.fieldValue
+      if (value === null || value === undefined) {
+        value = '-'
+      }
+      value = value + ''
+      currentRowData.push(value)
+    }
+    rowData.push(currentRowData.join('\t'))
+    const finalValue = rowData.join('\n')
+    copyToClipboard(finalValue).finally(() => {
+      ElMessage.success(t('qa.copied'))
+      console.debug('copied:\n', finalValue)
+    })
   }
 }

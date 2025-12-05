@@ -4,7 +4,6 @@ import icon_export_outlined from '@/assets/svg/icon_export_outlined.svg'
 import { promptApi } from '@/api/prompt'
 import { formatTimestamp } from '@/utils/date'
 import { datasourceApi } from '@/api/datasource'
-import ccmUpload from '@/assets/svg/icon_ccm-upload_outlined.svg'
 import icon_add_outlined from '@/assets/svg/icon_add_outlined.svg'
 import IconOpeEdit from '@/assets/svg/icon_edit_outlined.svg'
 import icon_copy_outlined from '@/assets/embedded/icon_copy_outlined.svg'
@@ -14,6 +13,10 @@ import EmptyBackground from '@/views/dashboard/common/EmptyBackground.vue'
 import { useClipboard } from '@vueuse/core'
 import { useI18n } from 'vue-i18n'
 import { cloneDeep } from 'lodash-es'
+import { convertFilterText, FilterText } from '@/components/filter-text'
+import { DrawerMain } from '@/components/drawer-main'
+import iconFilter from '@/assets/svg/icon-filter_outlined.svg'
+import Uploader from '@/views/system/excel-upload/Uploader.vue'
 
 interface Form {
   id?: string | null
@@ -24,7 +27,7 @@ interface Form {
   datasource_names: string[]
   name: string | null
 }
-
+const drawerMainRef = ref()
 const { t } = useI18n()
 const { copy } = useClipboard({ legacy: true })
 const multipleSelectionAll = ref<any[]>([])
@@ -37,7 +40,16 @@ const options = ref<any[]>([])
 const selectable = () => {
   return true
 }
+
+const state = reactive<any>({
+  conditions: [],
+  filterTexts: [],
+})
+
 onMounted(() => {
+  datasourceApi.list().then((res) => {
+    filterOption.value[0].option = [...res]
+  })
   search()
 })
 
@@ -79,44 +91,81 @@ const cancelDelete = () => {
   checkAll.value = false
   isIndeterminate.value = false
 }
-const exportBatchUser = () => {
-  ElMessageBox.confirm(
-    t('professional.selected_2_terms_de', { msg: multipleSelectionAll.value.length }),
-    {
-      confirmButtonType: 'primary',
-      confirmButtonText: t('professional.export'),
-      cancelButtonText: t('common.cancel'),
-      customClass: 'confirm-no_icon',
-      autofocus: false,
-    }
-  ).then(() => {
-    promptApi.deleteEmbedded(multipleSelectionAll.value.map((ele) => ele.id)).then(() => {
-      ElMessage({
-        type: 'success',
-        message: t('dashboard.delete_success'),
-      })
-      multipleSelectionAll.value = []
-      search()
-    })
-  })
+
+const getFileName = () => {
+  let title = ''
+  if (currentType.value === 'GENERATE_SQL') {
+    title = t('prompt.ask_sql')
+  }
+  if (currentType.value === 'ANALYSIS') {
+    title = t('prompt.data_analysis')
+  }
+  if (currentType.value === 'PREDICT_DATA') {
+    title = t('prompt.data_prediction')
+  }
+  return `${title}.xlsx`
 }
 
-const exportAllUser = () => {
-  ElMessageBox.confirm(t('professional.all_236_terms', { msg: pageInfo.total }), {
+const exportExcel = () => {
+  let title = ''
+  if (currentType.value === 'GENERATE_SQL') {
+    title = t('prompt.ask_sql')
+  }
+  if (currentType.value === 'ANALYSIS') {
+    title = t('prompt.data_analysis')
+  }
+  if (currentType.value === 'PREDICT_DATA') {
+    title = t('prompt.data_prediction')
+  }
+  ElMessageBox.confirm(t('prompt.export_hint', { msg: pageInfo.total, type: title }), {
     confirmButtonType: 'primary',
     confirmButtonText: t('professional.export'),
     cancelButtonText: t('common.cancel'),
     customClass: 'confirm-no_icon',
     autofocus: false,
   }).then(() => {
-    promptApi.deleteEmbedded(multipleSelectionAll.value.map((ele) => ele.id)).then(() => {
-      ElMessage({
-        type: 'success',
-        message: t('dashboard.delete_success'),
+    searchLoading.value = true
+    promptApi
+      .export2Excel(currentType.value, keywords.value ? { name: keywords.value } : {})
+      .then((res) => {
+        const blob = new Blob([res], {
+          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        })
+        const link = document.createElement('a')
+        link.href = URL.createObjectURL(blob)
+        link.download = `${title}.xlsx`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
       })
-      multipleSelectionAll.value = []
-      search()
-    })
+      .catch(async (error) => {
+        if (error.response) {
+          try {
+            let text = await error.response.data.text()
+            try {
+              text = JSON.parse(text)
+            } finally {
+              ElMessage({
+                message: text,
+                type: 'error',
+                showClose: true,
+              })
+            }
+          } catch (e) {
+            console.error('Error processing error response:', e)
+          }
+        } else {
+          console.error('Other error:', error)
+          ElMessage({
+            message: error,
+            type: 'error',
+            showClose: true,
+          })
+        }
+      })
+      .finally(() => {
+        searchLoading.value = false
+      })
   })
 }
 const deleteBatchUser = () => {
@@ -201,16 +250,7 @@ const search = () => {
   searchLoading.value = true
   oldKeywords.value = keywords.value
   promptApi
-    .getList(
-      pageInfo.currentPage,
-      pageInfo.pageSize,
-      currentType.value,
-      keywords.value
-        ? {
-            name: keywords.value,
-          }
-        : {}
-    )
+    .getList(pageInfo.currentPage, pageInfo.pageSize, currentType.value, configParams())
     .then((res: any) => {
       toggleRowLoading.value = true
       fieldList.value = res.data
@@ -332,6 +372,66 @@ const typeChange = (val: any) => {
   pageInfo.currentPage = 0
   search()
 }
+
+const configParams = () => {
+  let str = ''
+  if (keywords.value) {
+    str += `name=${keywords.value}`
+  }
+
+  state.conditions.forEach((ele: any) => {
+    ele.value.forEach((itx: any) => {
+      str += str ? `_${itx}` : `${ele.field}=${itx}`
+    })
+  })
+
+  if (str.length) {
+    str = `?${str}`
+  }
+  return str
+}
+const filterOption = ref<any[]>([
+  {
+    type: 'select',
+    option: [],
+    field: 'dslist',
+    title: t('ds.title'),
+    operate: 'in',
+    property: { placeholder: t('common.empty') + t('ds.title') },
+  },
+])
+
+const fillFilterText = () => {
+  const textArray = state.conditions?.length
+    ? convertFilterText(state.conditions, filterOption.value)
+    : []
+  state.filterTexts = [...textArray]
+  Object.assign(state.filterTexts, textArray)
+}
+const searchCondition = (conditions: any) => {
+  state.conditions = conditions
+  fillFilterText()
+  search()
+  drawerMainClose()
+}
+
+const clearFilter = (params?: number) => {
+  let index = params ? params : 0
+  if (isNaN(index)) {
+    state.filterTexts = []
+  } else {
+    state.filterTexts.splice(index, 1)
+  }
+  drawerMainRef.value.clearFilter(index)
+}
+
+const drawerMainOpen = async () => {
+  drawerMainRef.value.init()
+}
+
+const drawerMainClose = () => {
+  drawerMainRef.value.close()
+}
 </script>
 
 <template>
@@ -360,7 +460,7 @@ const typeChange = (val: any) => {
           {{ $t('prompt.data_prediction') }}
         </el-button>
       </div>
-      <div>
+      <div class="tool-row">
         <el-input
           v-model="keywords"
           style="width: 240px; margin-right: 12px"
@@ -374,21 +474,25 @@ const typeChange = (val: any) => {
             </el-icon>
           </template>
         </el-input>
-        <template v-if="false">
-          <el-button secondary @click="exportAllUser">
-            <template #icon>
-              <icon_export_outlined />
-            </template>
-            {{ $t('professional.export_all') }}
-          </el-button>
-          <el-button secondary @click="editHandler(null)">
-            <template #icon>
-              <ccmUpload></ccmUpload>
-            </template>
-            {{ $t('user.batch_import') }}
-          </el-button>
-        </template>
-        <el-button type="primary" @click="editHandler(null)">
+        <el-button secondary @click="exportExcel">
+          <template #icon>
+            <icon_export_outlined />
+          </template>
+          {{ $t('professional.export_all') }}
+        </el-button>
+        <Uploader
+          :upload-path="`/system/custom_prompt/${currentType}/uploadExcel`"
+          :template-path="`/system/custom_prompt/template`"
+          :template-name="getFileName()"
+          @upload-finished="search"
+        />
+        <el-button class="no-margin" secondary @click="drawerMainOpen">
+          <template #icon>
+            <iconFilter></iconFilter>
+          </template>
+          {{ $t('user.filter') }}
+        </el-button>
+        <el-button class="no-margin" type="primary" @click="editHandler(null)">
           <template #icon>
             <icon_add_outlined></icon_add_outlined>
           </template>
@@ -401,6 +505,11 @@ const typeChange = (val: any) => {
       class="table-content"
       :class="multipleSelectionAll?.length && 'show-pagination_height'"
     >
+      <filter-text
+        :total="pageInfo.total"
+        :filter-texts="state.filterTexts"
+        @clear-filter="clearFilter"
+      />
       <div class="preview-or-schema">
         <el-table
           ref="multipleTableRef"
@@ -512,9 +621,6 @@ const typeChange = (val: any) => {
       >
         {{ $t('datasource.select_all') }}
       </el-checkbox>
-      <button v-if="false" class="primary-button" @click="exportBatchUser">
-        {{ $t('professional.export') }}
-      </button>
 
       <button class="danger-button" @click="deleteBatchUser">{{ $t('dashboard.delete') }}</button>
 
@@ -579,13 +685,13 @@ const typeChange = (val: any) => {
           <el-radio :value="true">{{ $t('training.partial_data_sources') }}</el-radio>
         </el-radio-group>
         <el-select
+          v-if="pageForm.specific_ds"
           v-model="pageForm.datasource_ids"
           multiple
-          v-if="pageForm.specific_ds"
           filterable
-          @change="handleChange"
           :placeholder="$t('datasource.Please_select') + $t('common.empty') + $t('ds.title')"
           style="width: 100%; margin-top: 8px"
+          @change="handleChange"
         >
           <el-option v-for="item in options" :key="item.id" :label="item.name" :value="item.id" />
         </el-select>
@@ -637,9 +743,17 @@ const typeChange = (val: any) => {
       </el-form-item>
     </el-form>
   </el-drawer>
+  <drawer-main
+    ref="drawerMainRef"
+    :filter-options="filterOption"
+    @trigger-filter="searchCondition"
+  />
 </template>
 
 <style lang="less" scoped>
+.no-margin {
+  margin: 0;
+}
 .prompt {
   height: 100%;
   position: relative;
@@ -652,6 +766,13 @@ const typeChange = (val: any) => {
 
   :deep(.ed-table__cell) {
     cursor: pointer;
+  }
+
+  .tool-row {
+    display: flex;
+    align-items: center;
+    flex-direction: row;
+    gap: 8px;
   }
 
   .tool-left {

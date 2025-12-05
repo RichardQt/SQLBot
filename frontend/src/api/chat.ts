@@ -357,12 +357,19 @@ export const chatApi = {
   predict: (record_id: number | undefined, controller?: AbortController) => {
     return request.fetchStream(`/chat/record/${record_id}/predict`, {}, controller)
   },
-  recommendQuestions: (record_id: number | undefined, controller?: AbortController) => {
-    return request.fetchStream(`/chat/recommend_questions/${record_id}`, {}, controller)
+  recommendQuestions: (
+    record_id: number | undefined,
+    controller?: AbortController,
+    params?: any
+  ) => {
+    return request.fetchStream(`/chat/recommend_questions/${record_id}${params}`, {}, controller)
+  },
+  recentQuestions: (datasource_id?: number): Promise<any> => {
+    return request.get(`/chat/recent_questions/${datasource_id}`)
   },
   checkLLMModel: () => request.get('/system/aimodel/default', { requestOptions: { silent: true } }),
-  export2Excel: (data: any) =>
-    request.post('/chat/excel/export', data, {
+  export2Excel: (record_id: number | undefined) =>
+    request.get(`/chat/record/${record_id}/excel/export`, {
       responseType: 'blob',
       requestOptions: { customError: true },
     }),

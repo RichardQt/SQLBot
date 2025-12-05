@@ -11,6 +11,7 @@ const props = withDefaults(
     questions?: string
     firstChat?: boolean
     disabled?: boolean
+    position?: string
   }>(),
   {
     recordId: undefined,
@@ -18,6 +19,7 @@ const props = withDefaults(
     questions: '[]',
     firstChat: false,
     disabled: false,
+    position: 'chat',
   }
 )
 
@@ -34,14 +36,23 @@ const _currentChat = computed({
   },
 })
 
-const computedQuestions = computed<string>(() => {
+const computedQuestions = computed<string[]>(() => {
   if (
     props.questions &&
     props.questions.length > 0 &&
     startsWith(props.questions.trim(), '[') &&
     endsWith(props.questions.trim(), ']')
   ) {
-    return JSON.parse(props.questions)
+    try {
+      const parsedQuestions = JSON.parse(props.questions)
+      if (Array.isArray(parsedQuestions)) {
+        return parsedQuestions.length > 4 ? parsedQuestions.slice(0, 4) : parsedQuestions
+      }
+      return []
+    } catch (error) {
+      console.error('Failed to parse questions:', error)
+      return []
+    }
   }
   return []
 })
@@ -56,12 +67,13 @@ function clickQuestion(question: string): void {
 
 const stopFlag = ref(false)
 
-async function getRecommendQuestions() {
+async function getRecommendQuestions(articles_number: number) {
   stopFlag.value = false
   loading.value = true
   try {
     const controller: AbortController = new AbortController()
-    const response = await chatApi.recommendQuestions(props.recordId, controller)
+    const params = articles_number ? '?articles_number=' + articles_number : ''
+    const response = await chatApi.recommendQuestions(props.recordId, controller, params)
     const reader = response.body.getReader()
     const decoder = new TextDecoder('utf-8')
 
@@ -153,16 +165,30 @@ defineExpose({ getRecommendQuestions, id: () => props.recordId, stop })
 
 <template>
   <div v-if="computedQuestions.length > 0 || loading" class="recommend-questions">
-    <div v-if="firstChat" class="section-title first-chat">
+    <template v-if="position === 'chat'">
+      <div v-if="firstChat" class="section-title first-chat">
       <span>{{ t('qa.guess_u_ask') }}</span>
       <span class="ai-disclaimer"> AI生成内容仅供参考，请结合实际情况判断使用。</span>
     </div>
-    <div v-else class="section-title continue-ask">
+      <div v-else class="section-title continue-ask">
       <span>{{ t('qa.continue_to_ask') }}</span>
       <span class="ai-disclaimer"> AI生成内容仅供参考，请结合实际情况判断使用。</span>
     </div>
+    </template>
     <div v-if="loading">
+      <div v-if="position === 'input'" style="margin-bottom: 8px">{{ t('qa.guess_u_ask') }}</div>
       <el-button style="min-width: unset" type="primary" link loading />
+    </div>
+    <div v-else-if="position === 'input'" class="question-grid-input">
+      <div
+        v-for="(question, index) in computedQuestions"
+        :key="index"
+        class="question"
+        :class="{ disabled: disabled }"
+        @click="clickQuestion(question)"
+      >
+        {{ question }}
+      </div>
     </div>
     <div v-else class="question-grid">
       <div
@@ -176,10 +202,14 @@ defineExpose({ getRecommendQuestions, id: () => props.recordId, stop })
       </div>
     </div>
   </div>
+  <div v-else-if="position === 'input'" class="recommend-questions-error">
+    {{ $t('qa.retrieve_error') }}
+  </div>
 </template>
 
 <style scoped lang="less">
 .recommend-questions {
+  width: 100%;
   font-size: 14px;
   font-weight: 500;
   line-height: 22px;
@@ -208,6 +238,12 @@ defineExpose({ getRecommendQuestions, id: () => props.recordId, stop })
     font-weight: 400;
   }
 
+  .question-grid-input {
+    display: grid;
+    grid-gap: 12px;
+    grid-template-columns: repeat(1, calc(100% - 6px));
+  }
+
   .question-grid {
     display: grid;
     grid-gap: 12px;
@@ -230,5 +266,16 @@ defineExpose({ getRecommendQuestions, id: () => props.recordId, stop })
       background: rgba(245, 246, 247, 1);
     }
   }
+}
+
+.recommend-questions-error {
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(100, 106, 115, 1);
+  margin-top: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
 }
 </style>

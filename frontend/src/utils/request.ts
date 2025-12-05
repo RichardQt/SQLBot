@@ -12,6 +12,7 @@ import { useCache } from '@/utils/useCache'
 import { getLocale } from './utils'
 import { useAssistantStore } from '@/stores/assistant'
 import { useRouter } from 'vue-router'
+import JSONBig from 'json-bigint'
 // import { i18n } from '@/i18n'
 // const t = i18n.global.t
 const assistantStore = useAssistantStore()
@@ -61,6 +62,22 @@ class HttpService {
         'Content-Type': 'application/json',
         ...config?.headers,
       },
+      // add transformResponse to bigint
+      transformResponse: [
+        function (data) {
+          try {
+            return JSONBig.parse(data) // use JSON-bigint
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          } catch (e) {
+            try {
+              return JSON.parse(data)
+              // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            } catch (parseError) {
+              return data
+            }
+          }
+        },
+      ],
       ...config,
     })
 
@@ -99,6 +116,9 @@ class HttpService {
           }
           if (!assistantStore.getType || assistantStore.getType === 2) {
             config.headers['X-SQLBOT-ASSISTANT-ONLINE'] = assistantStore.getOnline
+          }
+          if (assistantStore.getHostOrigin) {
+            config.headers['X-SQLBOT-HOST-ORIGIN'] = assistantStore.getHostOrigin
           }
         }
         const locale = getLocale()
@@ -302,6 +322,9 @@ class HttpService {
           encodeURIComponent(assistantStore.getCertificate)
         )
       }
+      if (assistantStore.getHostOrigin) {
+        heads['X-SQLBOT-HOST-ORIGIN'] = assistantStore.getHostOrigin
+      }
       if (!assistantStore.getType || assistantStore.getType === 2) {
         heads['X-SQLBOT-ASSISTANT-ONLINE'] = assistantStore.getOnline
       }
@@ -436,7 +459,7 @@ class HttpService {
 export const request = new HttpService({
   baseURL: import.meta.env.VITE_API_BASE_URL,
 })
-/* 
+/*
 const showLicenseKeyError = (msg?: string) => {
   ElMessageBox.confirm(t('license.error_tips'), {
     confirmButtonType: 'primary',
