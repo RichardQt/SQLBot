@@ -78,6 +78,14 @@ template:
           - 生成的格式化语法需要适配对应的数据库引擎。
         </rule>
         <rule>
+          时间处理规则:
+          - 如果提问中未涉及时间描绘词，则默认查询"今年"数据
+          - "今年"指当前年份: YEAR(publish_date) = YEAR(CURRENT_DATE)
+          - "去年"指上一年: YEAR(publish_date) = YEAR(CURRENT_DATE) - 1
+          - "本月"指当前月: DATE_FORMAT(publish_date, '%Y-%m') = DATE_FORMAT(CURRENT_DATE, '%Y-%m')
+          - "上月"指上一月: DATE_FORMAT(publish_date, '%Y-%m') = DATE_FORMAT(DATE_SUB(CURRENT_DATE, INTERVAL 1 MONTH), '%Y-%m')
+        </rule>
+        <rule>
           生成的SQL查询结果可以用来进行图表展示，需要注意排序字段的排序优先级，例如：
             - 柱状图或折线图：适合展示在横轴的字段优先排序，若SQL包含分类字段，则分类字段次一级排序
         </rule>
@@ -91,32 +99,46 @@ template:
           当用户询问“为什么...字段没有显示/为空/不存在”等涉及数据缺失的原因时，请忽略因果逻辑，将其直接转化为查询请求：生成SQL查询该特定字段及相关业务主键（如名称、标题），并严格保留问题中的筛选与排序条件（如“点赞量前十”），目的是直接展示数据库中该字段的实际存储情况（如NULL或空串）。
         </rule>
 
-       <!-- 法宣领域专用规则 -->
-       <rule>
-          全局默认筛选：在涉及文章查询生成的SQL中，必须默认添加筛选条件 `type_class = 1`（即默认限定为普法文章），即使所谓“普法”二字未出现在问题中；
-          例外豁免：只有当用户在提问中显式包含“所有文章”、“全部文章”、“不限类型”等明确表达全量查询意图的关键词时，才禁止添加 `type_class = 1` 这一条件。
+       <!-- 用户智能分析系统专用规则 -->
+       <rule>用户质询数据库表情况:
+          - ca_consultation_emotions（用户情绪分布表）：记录每份报告中各类情绪的占比
+          - ca_customer_audio_emotions（音频情绪序列记录表）：记录音频中的情绪变化序列
+            - ca_customer_service_quality（客服质量明细表）：记录每份报告中各客服的质检表现
+            - ca_negative_review（差评记录表）：记录差评信息
+            - ca_question_category（问题分类层级表）：问题分类的层级结构
+            - ca_question_category_data（问题分类数据表）：问题分类的具体数据
+            - ca_report（主报告表）：存储每次统计报告的基本信息
+            - ca_report_hot_keywords（报告热词表）：记录每份报告中的热词
+            - ca_summary_daily_audio_stats（每日音频处理统计表）：每日音频处理量与平均质检分统计
+            - ca_summary_daily_calls（每日来电统计表）：每日来电总数统计
+            - ca_summary_daily_mcp_agent_stats（每日MCP和Agent统计表）：每日MCP和Agent调用次数统计
+            - ca_summary_daily_top_users（每日高频用户排行榜）：近7日高频咨询用户排行榜
+            - ca_top_user_demand_category（Top用户需求分类表）：高频用户的需求分类统计
+            - ca_user_age_distribution（用户年龄分布表）：咨询用户的年龄分布统计
+            - ca_user_info（用户信息表）：用户基本信息
+            - ca_customer_audio_records（通话记录信息表）：通话记录详细信息
+            - ca_audio_recognition_details（音频识别详情表）：音频识别的详细评分信息
         </rule>
        <rule>
-          法宣领域术语理解规则:
-          - 当提问涉及"法律法规"时,优先查询 fx_education_articles_legal 表的 legal_content_type 字段或fx_theme_law_relation.law_name 字段
-          - 当提问涉及"受众群体"时,查询 fx_education_articles_group 表的 target_group 字段
-          - 当提问涉及"主题"或者“法律主题”时,查询 fx_theme 表的 theme_name，其开始时间和结束时间对应fx_theme的start_date和end_date字段
-          - 当提问涉及"单位"或"部门"时,查询 fx_data_unit 表的 unit_name 字段
+          用户质询表:
+            表ca_consultation_emotions(用户情绪分布表：记录每份报告中各类情绪的占比),包含键id(主键ID),report_id(关联的报告ID),emotion_type(情绪类型：满意、愤怒、犹豫、失望等),percentage(占比值，范围 0.00 ~ 100.00)。该表包含索引idx_report_id和					idx_emotion_type，示例查询包括按报告ID查询情绪分布、按占比降序排列情绪类型等。
+            表ca_customer_audio_emotions(音频情绪序列记录表),包含键id(主键ID),audio_id(外键，关联音频记录),emotion(情绪值：急切、失望、满意、犹豫、愤怒等),sort_order(情绪出现的顺序，从0开始递增),create_time(创建时间),update_time(更新时间)。该表包含索引		idx_audio_order，示例查询包括按音频ID和顺序查询情绪序列、按情绪类型统计数量等。
+            表ca_customer_service_quality(客服质量明细表：记录每份报告中各客服的质检表现),包含键id(主键ID),report_id(关联的报告ID),staff_name(客服姓名),inspected_count(已质检数，会话/工单数),critical_violation_count(重点问题违规数),avg_score(平均得	分),avg_service_compliance_score(服务规范性平均得分),avg_answer_accuracy_score(答复准确性平均得分),create_time(创建时间),update_time(更新时间),del_flag(删除标识：0-未删除正常，1-已删除逻辑删除)。该表包含索引idx_report_id、idx_staff_name和				idx_report_staff，示例查询包括按报告ID查询客服质量、按平均得分降序排列客服等。
+            表ca_negative_review(差评记录表),包含键id(主键ID),audio_id(音频记录表主键ID),qa_id(ca_audio_recognition_details对话记录表主键ID),status(状态值 0未评价 1差评),create_by(创建人),update_by(更新人),create_time(创建时间),update_time(更新时间),del_flag(是	否删除，0未删除，1已删除)。该表未定义索引，示例查询包括按音频ID查询差评、统计差评数量等。
+            表ca_question_category(问题分类层级表),包含键id(主键ID),parent_id(父级分类ID，顶级分类为0),qu_name(层级分类名称),level(层级，1一级，2二级，3三级等),sort_order(排序),create_time(创建时间),update_time(更新时间),status(状态:1启用 2禁用)。该表包含索引	idx_parent_id、idx_qu_name和idx_level，示例查询包括查询顶级分类、按层级查询分类等。
+            表ca_question_category_data(问题分类数据表),包含键question_module(问题模块，如：交通、教育、社保等),question_type(问题类型，如：咨询、投诉、建议等),question_desc(问题描述，详细说明该问题类别的含义或示例),department(负责的委办局名称，如：市交	通局、教育局等),customer_service_name(客服姓名),create_time(创建时间),registration_time(登记时间),phone(用户咨询电话)。该表包含索引idx_question_module、idx_question_type和idx_department，示例查询包括按问题模块查询、按问题类型统计数量等。
+            表ca_report(主报告表：存储每次统计报告的基本信息),包含键id(报告ID，主键),report_name(报告名称，如：2025年9月客服质量分析),report_date(报告生成日期yyyy-MM-dd),inspected_audio_count(已质检音频数),avg_audio_score(音频平均得	分),critical_violation_rate(客服重点问题违规率，百分比值),avg_consult_duration(咨询平均时长秒),create_time(创建时间),update_time(更新时间),del_flag(删除标识：0-未删除正常，1-已删除逻辑删除),create_user_id(报告创建者id),create_user_name(报告创建者姓名)。该		表包含索引idx_report_date和idx_create_time，示例查询包括按报告日期查询、按报告日期降序排列报告等。
+            表ca_report_hot_keywords(报告热词表：记录每份报告中出现的咨询问题热词),包含键id(主键ID),report_id(关联的报告ID),keyword(热词名称，如：档案服务、6G通信、消费冷静期),frequency(该热词在报告中的提及次数)。该表包含索引idx_report_id和idx_keyword，示	例查询包括按报告ID查询热词并按频率降序排列、按热词统计总提及次数等。
+            表ca_summary_daily_audio_stats(每日音频处理量与平均质检分统计表，T+1任务生成),包含键record_date(统计日期，格式：YYYY-MM-DD),processed_audio_count(当日处理的音频总数，已完成质检),avg_audio_score(音频平均质检得分，保留两位小	数),create_time(记录创建时间),update_time(记录更新时间)。该表包含索引idx_created_at和idx_avg_score，示例查询包括按记录日期降序排列最近7天数据、计算日均处理音频数等。
+            表ca_summary_daily_calls(每日来电总数统计表，T+1任务生成，用于近7天趋势图),包含键record_date(统计日期，格式：YYYY-MM-DD),call_count(该日总来电数量，呼入),create_time(记录创建时间),update_time(记录更新时间)。该表包含索引idx_create_time，示例	查询包括按记录日期降序排列最近7天数据、计算周总来电数等。
+            表ca_summary_daily_mcp_agent_stats(每日MCP和Agent调用次数统计表，T+1任务生成，用于趋势图),包含键record_date(统计日期，格式：YYYY-MM-DD),mcp_call_count(当日MCP调用次数),agent_call_count(当日Agent调用次数),create_time(记录创建时		间),update_time(记录更新时间)。该表包含索引idx_create_time，示例查询包括按记录日期降序排列最近7天数据、计算总调用次数等。
+            表ca_summary_daily_top_users(每日生成的近7日高频咨询用户排行榜，T+1任务生成，可查历史Top榜),包含键id(主键ID),phone(用户手机号),call_count(近7日内累计咨询次数，截至record_date),record_date(本条记录生成的基准日期),create_time(记录创建时	间),update_time(记录更新时间)。该表包含索引uk_phone_record_date、idx_record_date、idx_record_date_count和idx_phone，示例查询包括按基准日期查询用户排行并按咨询次数降序排列、按手机号统计总咨询次数等。
+            表ca_top_user_demand_category(Top咨询用户需求分类表),包含键id(主键ID),question_module(问题模块，如：交通、教育、社保等),local_call_count(本地电话咨询次数),out_of_city_call_count(外地电话咨询次数),total_count(总咨询次数),create_time(创建时	间),update_time(更新时间),record_date(数据日期yyyy-MM-dd)。该表包含索引uk_question_module，示例查询包括按总咨询次数降序排列、按问题模块统计咨询次数等。
+            表ca_user_age_distribution(咨询用户年龄分布表),包含键id(主键ID),age_group(年龄组，如：18岁及以下、19-22岁等),male_count(男性人数),female_count(女性人数),create_time(创建时间),update_time(更新时间),record_date(数据日期yyyy-MM-dd)。该表包含索引	uk_age_gender，示例查询包括按数据日期查询年龄分布、按年龄组统计总人数等。
+            表ca_user_info(用户信息表),包含键phone(手机号),gender(性别：0-未知，1-男，2-女),age(年龄),create_time(创建时间),phone_location(手机号归属地)。该表包含索引uk_phone，示例查询包括按手机号查询用户信息、按性别统计用户数量等。
+            表ca_customer_audio_records(通话记录信息表),包含键id(主键ID),call_time(呼叫时间),caller_id_number(呼叫方号码),destination_number(接收方号码),call_type(通话类型：in呼入客户打进来，out呼出客服外呼),customer_service_name(客户服务名	称),customer_service_id(客户服务ID),billsec(通话时长秒),audio_name(音频文件名),status(状态),score(分值),process_text(处理过后的文章),origin_text(原始的音频转文本),completion_time(完成时间),create_by(创建人),update_by(更新人),create_time(创建时	间),update_time(更新时间),del_flag(是否删除，0未删除，1已删除),remark(备注),category_id(询问问题分类id),service_score(服务规范性得分),accuracy_score(答复准确性得分)。该表未定义索引，示例查询包括按呼叫方号码查询通话记录、按客服姓名统计平均通话时长等。
+            表ca_audio_recognition_details(音频识别详情表),包含键id(主键ID),audio_id(音频ID),category(分类，服务规范性Service，答复准确性Accuracy),score(扣分),reason(扣分原因),user_question(用户问题),agent_response(客服回复),create_time(创建时	间),update_time(更新时间),sum_id(汇总ID，总结性问题id),origin_id(来源ID，原始性问题id),serial(问题编号),create_by(创建人),update_by(更新人),is_deleted(是否删除，0未删除，1已删除),remark(备注)。该表未定义索引，示例查询包括按音频ID查询识别详情、按分类统计	平均扣分等。
         </rule>
-        <rule>
-          法宣领域时间处理规则:
-          - 如果提问中未涉及时间描绘词，则默认查询"今年"数据
-          - "今年"指当前年份: YEAR(publish_date) = YEAR(CURRENT_DATE)
-          - "去年"指上一年: YEAR(publish_date) = YEAR(CURRENT_DATE) - 1
-          - "本月"指当前月: DATE_FORMAT(publish_date, '%Y-%m') = DATE_FORMAT(CURRENT_DATE, '%Y-%m')
-          - "上月"指上一月: DATE_FORMAT(publish_date, '%Y-%m') = DATE_FORMAT(DATE_SUB(CURRENT_DATE, INTERVAL 1 MONTH), '%Y-%m')
-        </rule>
-        <rule>
-          法宣领域字段值规范:
-          - 受众群体常见值: '领导干部'、'基层干部'、'企业人员'、'青少年'、'社区居民'、'中老年人'、'网约车司机'、'网络货车司机'、'网约代驾司机'、'外卖骑手'、'快递员'、'家政服务员'、'房地产经纪人员'、'互联网营销师','直播带货主播','村民','农名工'
-          - 法律法规常见值：宪法；民法典；湿地保护法；野生动物保护法；气象法；妇女权益保障法；反家庭暴力法；劳动法；劳动合同法；社会保险法；劳动争议调解仲裁法；就业促进法；职业教育法；职业病防治法；刑法；森林法；消费者权益保护法；产品质量法；计量法；食品卫生法；……
-        </rule>
-
       </Rules>
 
       {basic_sql_examples}
@@ -572,8 +594,15 @@ template:
       上一个问题: {previous_question}
       当前问题: {current_question}
 
-      如果当前问题是追问、指代了上一个问题中的实体，或省略了能从上一个问题推断出的信息，则两者相关。
-      如果当前问题是全新主题且可以独立理解，则两者不相关。
+      判断规则（按优先级从高到低）：
+      1. 【相关】当前问题包含代词（如"它"、"这个"、"那个"、"这些"、"上面"、"刚才"等）
+      2. 【相关】当前问题是对上一个问题结果的追问、质疑或补充（如"为什么没有..."、"怎么没有..."、"还要加上..."、"再加一个..."、"换成..."）
+      3. 【相关】当前问题省略了主体、时间、条件等关键信息，而这些信息可以从上一个问题推断
+      4. 【相关】当前问题涉及的数据表或业务领域与上一个问题相同或相近
+      5. 【相关】当前问题是对上一个问题的修改、调整或细化（如"按月份统计"、"只看今年的"、"排除xxx"）
+      6. 【不相关】仅当当前问题是完全不同的主题，且包含完整独立的查询意图时，才判断为不相关
+
+      重要提示：在多轮对话场景中，请倾向于判断为相关，除非当前问题明显是一个全新的、完整的、独立的查询请求。
 
       返回一个包含单个布尔字段"is_related"的JSON对象。
       示例: {{"is_related": true}} 或 {{"is_related": false}}
