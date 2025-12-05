@@ -5,8 +5,10 @@ import {
   type S2DataConfig,
   type S2MountContainer,
   type ThemeCfg,
+  S2Event,
 } from '@antv/s2'
 import { debounce } from 'lodash-es'
+import { ElMessage } from 'element-plus-secondary'
 
 const CENTER_ALIGN_THEME: ThemeCfg = {
   theme: {
@@ -89,14 +91,14 @@ export class Table extends BaseChart {
       this.table = new TableSheet(this.container, s2DataConfig, s2Options)
       this.table.setThemeCfg(CENTER_ALIGN_THEME)
       // right click
-      this.table.on(S2Event.GLOBAL_COPIED, (data) => {
+      this.table.on(S2Event.GLOBAL_COPIED, (data: any) => {
         ElMessage.success(t('qa.copied'))
         console.debug('copied: ', data)
       })
       this.table.getCanvasElement().addEventListener('contextmenu', (event) => {
         event.preventDefault()
       })
-      this.table.on(S2Event.GLOBAL_CONTEXT_MENU, (event) => copyData(event, this.table))
+      this.table.on(S2Event.GLOBAL_CONTEXT_MENU, (event: any) => copyData(event, this.table))
     }
   }
 
@@ -165,5 +167,13 @@ function copyData(event: any, s2?: TableSheet) {
       ElMessage.success(t('qa.copied'))
       console.debug('copied:\n', finalValue)
     })
+  }
+}
+
+async function copyToClipboard(text: string) {
+  try {
+    await navigator.clipboard.writeText(text)
+  } catch (err) {
+    console.error('Failed to copy: ', err)
   }
 }

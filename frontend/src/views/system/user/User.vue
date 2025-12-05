@@ -238,7 +238,7 @@
     size="600px"
     :before-close="onFormClose"
   >
-    <div style="margin-bottom: 12px" class="down-template">
+    <!-- <div style="margin-bottom: 12px" class="down-template">
       <span class="icon-span">
         <el-icon>
           <Icon name="icon_warning_filled"><icon_warning_filled class="svg-icon" /></Icon>
@@ -250,7 +250,7 @@
           t('datasource.copy')
         }}</el-button>
       </div>
-    </div>
+    </div> -->
     <el-form
       ref="termFormRef"
       :model="state.form"
@@ -524,15 +524,15 @@ const setPopoverRef = (el: any, row: any) => {
   row.popoverRef = el
 }
 
-const copyPassword = () => {
-  copy(defaultPwd.value)
-    .then(function () {
-      ElMessage.success(t('embedded.copy_successful'))
-    })
-    .catch(function () {
-      ElMessage.error(t('embedded.copy_failed'))
-    })
-}
+// const copyPassword = () => {
+//   copy(defaultPwd.value)
+//     .then(function () {
+//       ElMessage.success(t('embedded.copy_successful'))
+//     })
+//     .catch(function () {
+//       ElMessage.error(t('embedded.copy_failed'))
+//     })
+// }
 
 const setButtonRef = (el: any, row: any) => {
   row.buttonRef = el

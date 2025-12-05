@@ -32,17 +32,6 @@ from fastapi import HTTPException
 from apps.db.es_engine import get_es_connect, get_es_index, get_es_fields, get_es_data_by_http
 from common.core.config import settings
 
-try:
-    if os.path.exists(settings.ORACLE_CLIENT_PATH):
-        oracledb.init_oracle_client(
-            lib_dir=settings.ORACLE_CLIENT_PATH
-        )
-        SQLBotLogUtil.info("init oracle client success, use thick mode")
-    else:
-        SQLBotLogUtil.info("init oracle client failed, because not found oracle client, use thin mode")
-except Exception as e:
-    SQLBotLogUtil.error("init oracle client failed, check your client is installed, use thin mode")
-
 
 def get_uri(ds: CoreDatasource) -> str:
     conf = DatasourceConf(**json.loads(aes_decrypt(ds.configuration))) if not equals_ignore_case(ds.type,

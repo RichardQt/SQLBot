@@ -554,6 +554,12 @@ const setPageCustomColor = (val: any) => {
   const ele = document.getElementsByClassName('appearance-table__content')[0] as HTMLElement
   setCurrentColor(val, ele)
 }
+const resetTopForm = (_reset2Default?: boolean) => {
+  for (const key in topForm) {
+    topForm[key as keyof typeof topForm] = defaultTopForm[key as keyof typeof defaultTopForm]!
+  }
+}
+
 const resetLoginForm = (reset2Default?: boolean) => {
   for (const key in loginForm) {
     loginForm[key as keyof typeof loginForm] =

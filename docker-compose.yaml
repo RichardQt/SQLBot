@@ -1,7 +1,7 @@
 services:
   sqlbot:
-    image: registry.cn-heyuan.aliyuncs.com/images-lsr/sqlbot_fx:v1.0.0
-    container_name: sqlbot_fx
+    image: registry.cn-heyuan.aliyuncs.com/images-lsr/sqlbot_sw:v1.1.1
+    container_name: sqlbot_sw
     restart: always
     privileged: true
     networks:

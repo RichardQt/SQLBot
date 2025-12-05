@@ -441,7 +441,7 @@ import { onClickOutside } from '@vueuse/core'
 import { useAppearanceStoreWithOut } from '@/stores/appearance'
 import { useUserStore } from '@/stores/user'
 import { debounce } from 'lodash-es'
-import { ElMessage } from 'element-plus'
+// import { ElMessage } from 'element-plus'
 import { isMobile } from '@/utils/utils'
 import router from '@/router'
 import QuickQuestion from '@/views/chat/QuickQuestion.vue'
@@ -1062,16 +1062,16 @@ onMounted(() => {
   pageEmbeddedPrepareInit()
 })
 
-const handleMultiTurnChange = async (val: boolean | string | number) => {
-  if (!currentChat.value.id) return
-  try {
-    await chatApi.updateMultiTurn(currentChat.value.id, !!val)
-  } catch (error) {
-    console.error(error)
-    currentChat.value.enable_multi_turn = !val
-    ElMessage.error('设置失败')
-  }
-}
+// const handleMultiTurnChange = async (val: boolean | string | number) => {
+//   if (!currentChat.value.id) return
+//   try {
+//     await chatApi.updateMultiTurn(currentChat.value.id, !!val)
+//   } catch (error) {
+//     console.error(error)
+//     currentChat.value.enable_multi_turn = !val
+//     ElMessage.error('设置失败')
+//   }
+// }
 </script>
 
 <style lang="less" scoped>

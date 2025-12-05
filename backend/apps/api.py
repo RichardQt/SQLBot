@@ -8,6 +8,7 @@ from apps.mcp import mcp
 from apps.system.api import login, user, aimodel, workspace, assistant
 from apps.terminology.api import terminology
 from apps.settings.api import base
+from sqlbot_xpack.custom_prompt.api import custom_prompt
 
 api_router = APIRouter()
 api_router.include_router(login.router)
@@ -24,5 +25,6 @@ api_router.include_router(enhanced_chat.router, prefix='/chat', tags=['chat'])
 api_router.include_router(dashboard_api.router)
 api_router.include_router(mcp.router)
 api_router.include_router(table_relation.router)
+api_router.include_router(custom_prompt.router)
 
 api_router.include_router(recommended_problem.router)

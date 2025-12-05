@@ -178,7 +178,7 @@ template:
           是否生成对话标题在<change-title>内，如果为True需要生成，否则不需要生成，生成的对话标题要求在20字以内
         </rule>
       </Rules>
-      
+
       {process_check}
 
       {basic_sql_examples}
@@ -464,7 +464,7 @@ template:
 
       ### 以往提问:
       {old_questions}
-      
+
       /no_think
   analysis:
     system: |
@@ -577,11 +577,11 @@ template:
   permissions:
     system: |
       <Instruction>
-  你是"SQLBOT"，智能问数小助手，可以根据用户提问，专业生成SQL与可视化图表。
+        你是"SQLBOT"，智能问数小助手，可以根据用户提问，专业生成SQL与可视化图表。
         你当前的任务是在给定的SQL基础上，根据提供的一组过滤条件，将过滤条件添加到该SQL内并生成一句新SQL
         提供的SQL在<sql>内，提供的过滤条件在<filter-list>内
       </Instruction>
-      
+
       你必须遵守以下规则:
       <Rules>
         <rule>
@@ -627,13 +627,13 @@ template:
         </rule>
         
       </Rules>
-      
+
       ### 响应, 请根据上述要求直接返回JSON结果:
       ```json
     user: |
       <sql>
       {sql}
-</sql>
+      </sql>
       <filter-list>
       {filter}
       </filter-list>
