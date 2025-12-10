@@ -35,6 +35,7 @@ from apps.chat.models.chat_model import ChatQuestion, ChatRecord, Chat, RenameCh
     ChatFinishStep
 from apps.chat.task.context_analyzer import ContextAnalyzer
 from apps.chat.task.question_completer import QuestionCompleter
+from apps.chat.task.question_clarity_checker import QuestionClarityChecker
 from apps.data_training.curd.data_training import get_training_template
 from apps.datasource.crud.datasource import get_table_schema
 from apps.datasource.crud.permission import get_row_permission_filters, is_normal_user
@@ -208,7 +209,7 @@ class LLMService:
                 current_created_at=current_created_at,
             )
             if not previous_question:
-                SQLBotLogUtil.info(f"No previous question found for chat: {chat_id}")
+                SQLBotLogUtil.info(f"No previous successful SQL question found for chat: {chat_id}")
                 return current_question, False
             
             # 3. 意图识别
@@ -245,10 +246,21 @@ class LLMService:
         current_record_id: Optional[int] = None,
         current_created_at: Optional[datetime] = None,
     ) -> Optional[str]:
-        """获取上一轮对话的完整问题"""
+        """
+        获取上一轮对话的完整问题
+        
+        只获取 SQL 执行成功的问题记录，条件为：
+        - sql 字段不为空（成功生成了 SQL）
+        - error 字段为空（没有执行错误）
+        """
         stmt = (
             select(ChatRecord.question, ChatRecord.complete_question)
             .where(ChatRecord.chat_id == chat_id)
+            .where(ChatRecord.sql.isnot(None))  # SQL 不为空
+            .where(ChatRecord.sql != '')  # SQL 不为空字符串
+            .where(
+                (ChatRecord.error.is_(None)) | (ChatRecord.error == '')
+            )  # 没有错误
         )
 
         if current_record_id:
@@ -263,10 +275,21 @@ class LLMService:
             return result.complete_question or result.question
         return None
 
-    def init_messages(self):
-        last_sql_messages: List[dict[str, Any]] = self.generate_sql_logs[-1].messages if len(
-            self.generate_sql_logs) > 0 else []
-
+    def init_messages(self, session: Session):
+        """
+        初始化SQL消息列表
+        
+        根据enable_multi_turn状态决定是否加载历史消息：
+        - 关闭多轮对话：仅加载系统提示，不加载任何历史消息
+        - 开启多轮对话：加载系统提示和上一轮的SQL消息历史
+        
+        Args:
+            session: 数据库会话，用于查询Chat表获取enable_multi_turn状态
+        """
+        # 查询Chat表获取enable_multi_turn状态
+        chat = session.get(Chat, self.chat_question.chat_id)
+        enable_multi_turn = chat.enable_multi_turn if chat else False
+        
         # todo maybe can configure
         count_limit = 0 - base_message_count_limit
 
@@ -274,34 +297,42 @@ class LLMService:
         # add sys prompt
         self.sql_message.append(SystemMessage(
             content=self.chat_question.sql_sys_question(self.ds.type, settings.GENERATE_SQL_QUERY_LIMIT_ENABLED)))
-        if last_sql_messages is not None and len(last_sql_messages) > 0:
-            # limit count
-            for last_sql_message in last_sql_messages[count_limit:]:
-                _msg: BaseMessage
-                if last_sql_message['type'] == 'human':
-                    _msg = HumanMessage(content=last_sql_message['content'])
-                    self.sql_message.append(_msg)
-                elif last_sql_message['type'] == 'ai':
-                    _msg = AIMessage(content=last_sql_message['content'])
-                    self.sql_message.append(_msg)
-
-        last_chart_messages: List[dict[str, Any]] = self.generate_chart_logs[-1].messages if len(
-            self.generate_chart_logs) > 0 else []
+        
+        # 仅在开启多轮对话时加载历史消息
+        if enable_multi_turn:
+            last_sql_messages: List[dict[str, Any]] = self.generate_sql_logs[-1].messages if len(
+                self.generate_sql_logs) > 0 else []
+            
+            if last_sql_messages is not None and len(last_sql_messages) > 0:
+                # limit count
+                for last_sql_message in last_sql_messages[count_limit:]:
+                    _msg: BaseMessage
+                    if last_sql_message['type'] == 'human':
+                        _msg = HumanMessage(content=last_sql_message['content'])
+                        self.sql_message.append(_msg)
+                    elif last_sql_message['type'] == 'ai':
+                        _msg = AIMessage(content=last_sql_message['content'])
+                        self.sql_message.append(_msg)
 
         self.chart_message = []
         # add sys prompt
         self.chart_message.append(SystemMessage(content=self.chat_question.chart_sys_question()))
 
-        if last_chart_messages is not None and len(last_chart_messages) > 0:
-            # limit count
-            for last_chart_message in last_chart_messages:
-                _msg: BaseMessage
-                if last_chart_message.get('type') == 'human':
-                    _msg = HumanMessage(content=last_chart_message.get('content'))
-                    self.chart_message.append(_msg)
-                elif last_chart_message.get('type') == 'ai':
-                    _msg = AIMessage(content=last_chart_message.get('content'))
-                    self.chart_message.append(_msg)
+        # 仅在开启多轮对话时加载图表历史消息
+        if enable_multi_turn:
+            last_chart_messages: List[dict[str, Any]] = self.generate_chart_logs[-1].messages if len(
+                self.generate_chart_logs) > 0 else []
+
+            if last_chart_messages is not None and len(last_chart_messages) > 0:
+                # limit count
+                for last_chart_message in last_chart_messages:
+                    _msg: BaseMessage
+                    if last_chart_message.get('type') == 'human':
+                        _msg = HumanMessage(content=last_chart_message.get('content'))
+                        self.chart_message.append(_msg)
+                    elif last_chart_message.get('type') == 'ai':
+                        _msg = AIMessage(content=last_chart_message.get('content'))
+                        self.chart_message.append(_msg)
 
     def init_record(self, session: Session) -> ChatRecord:
         self.record = save_question(session=session, current_user=self.current_user, question=self.chat_question)
@@ -627,12 +658,57 @@ class LLMService:
                 self.chat_question.custom_prompt = find_custom_prompts(_session, CustomPromptTypeEnum.GENERATE_SQL,
                                                                        oid, ds_id)
 
-            self.init_messages()
+            self.init_messages(_session)
 
         if _error:
             raise _error
 
     def generate_sql(self, _session: Session):
+        # Check if multi-turn is disabled and question clarity check is needed
+        chat = _session.get(Chat, self.chat_question.chat_id)
+        enable_multi_turn = chat.enable_multi_turn if chat else False
+        
+        # When multi-turn is disabled, check if the question is clear enough
+        if not enable_multi_turn:
+            clarity_checker = QuestionClarityChecker(self.llm, self.chat_question.lang)
+            is_clear, suggestion = clarity_checker.check_clarity(
+                self.chat_question.question,
+                self.chat_question.db_schema or ""
+            )
+            
+            if not is_clear:
+                # Return a prompt message instead of generating SQL
+                SQLBotLogUtil.info(f"Question not clear enough: {self.chat_question.question}, suggestion: {suggestion}")
+                unclear_response = orjson.dumps({
+                    "success": False,
+                    "message": suggestion or "question_unclear_prompt"
+                }).decode()
+                
+                # Log the clarity check result
+                self.current_logs[OperationEnum.GENERATE_SQL] = start_log(
+                    session=_session,
+                    ai_modal_id=self.chat_question.ai_modal_id,
+                    ai_modal_name=self.chat_question.ai_modal_name,
+                    operate=OperationEnum.GENERATE_SQL,
+                    record_id=self.record.id,
+                    full_message=[{'type': 'system', 'content': 'Question clarity check failed'}]
+                )
+                self.current_logs[OperationEnum.GENERATE_SQL] = end_log(
+                    session=_session,
+                    log=self.current_logs[OperationEnum.GENERATE_SQL],
+                    full_message=[{'type': 'system', 'content': 'Question clarity check failed'},
+                                  {'type': 'ai', 'content': unclear_response}],
+                    reasoning_content='',
+                    token_usage={}
+                )
+                self.record = save_sql_answer(
+                    session=_session, 
+                    record_id=self.record.id,
+                    answer=orjson.dumps({'content': unclear_response}).decode()
+                )
+                yield {'content': unclear_response}
+                return
+        
         # append current question
         self.sql_message.append(HumanMessage(
             self.chat_question.sql_user_question(current_time=datetime.now().strftime('%Y-%m-%d %H:%M:%S'))))
@@ -1128,7 +1204,7 @@ class LLMService:
                     self.chat_question.custom_prompt = find_custom_prompts(_session,
                                                                            CustomPromptTypeEnum.GENERATE_SQL,
                                                                            oid, ds_id)
-                self.init_messages()
+                self.init_messages(_session)
                 if in_chat:
                     yield emit_step_progress(1, 60, '整合历史信息与业务术语')
                     time.sleep(0.08)

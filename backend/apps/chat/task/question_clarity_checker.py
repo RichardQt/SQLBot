@@ -2,42 +2,42 @@ import orjson
 from langchain.chat_models.base import BaseChatModel
 from langchain_core.messages import HumanMessage, SystemMessage
 
-from apps.template.multi_turn.generator import get_context_analysis_template
+from apps.template.multi_turn.generator import get_question_clarity_template
 from common.utils.utils import extract_nested_json
 
 
-class ContextAnalyzer:
-    """负责分析问题之间的关联性"""
+class QuestionClarityChecker:
+    """负责检查问题是否足够明确"""
 
     def __init__(self, llm: BaseChatModel, lang: str):
         self.llm = llm
         self.lang = lang
 
-    def analyze_relevance(
+    def check_clarity(
         self,
-        previous_question: str,
-        current_question: str
-    ) -> bool:
+        question: str,
+        db_schema: str
+    ) -> tuple[bool, str]:
         """
-        使用大模型判断两个问题是否存在关联
+        检查问题是否足够明确，能够独立生成SQL
 
         Args:
-            previous_question: 上一轮问题
-            current_question: 当前问题
+            question: 用户问题
+            db_schema: 数据库Schema
 
         Returns:
-            bool: True表示存在关联，False表示不存在关联
+            tuple[bool, str]: (是否明确, 提示信息)
         """
-        template = get_context_analysis_template()
+        template = get_question_clarity_template()
         format_kwargs = {
-            'previous_question': previous_question,
-            'current_question': current_question,
+            'question': question,
+            'schema': db_schema,
             'lang': self.lang,
         }
 
         system_prompt_tpl = template.get('system')
         if not system_prompt_tpl:
-            raise ValueError('context_analysis.system 模板缺失')
+            raise ValueError('question_clarity.system 模板缺失')
 
         messages = [SystemMessage(content=system_prompt_tpl.format(**format_kwargs))]
 
@@ -52,9 +52,11 @@ class ContextAnalyzer:
             json_str = extract_nested_json(content)
             if json_str:
                 data = orjson.loads(json_str)
-                return data.get("is_related", True)
+                is_clear = data.get("is_clear", True)
+                suggestion = data.get("suggestion", "")
+                return is_clear, suggestion
         except Exception:
             pass
 
-        # 解析失败时默认返回相关，宁可多做问题补全也不漏掉
-        return True
+        # Default to clear if parsing fails to avoid blocking user
+        return True, ""

@@ -1,5 +1,6 @@
 {
   "i18n_default_workspace": "默认工作空间",
+  "i18n_question_unclear_prompt": "您的问题表述不够明确，请提供更完整的问题描述，包含具体的查询目标和条件。",
   "i18n_ds_name_exist": "名称已存在",
   "i18n_concat_admin": "请联系管理员！",
   "i18n_exist": "{msg}已存在！",
