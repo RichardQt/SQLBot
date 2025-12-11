@@ -3,7 +3,7 @@ from langchain.chat_models.base import BaseChatModel
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from apps.template.multi_turn.generator import get_question_complete_template
-from common.utils.utils import extract_nested_json
+from common.utils.utils import extract_nested_json, SQLBotLogUtil
 
 
 class QuestionCompleter:
@@ -48,12 +48,16 @@ class QuestionCompleter:
         try:
             response = self.llm.invoke(messages)
             content = response.content
+            SQLBotLogUtil.info(f"Question completer LLM response: {content}")
 
             json_str = extract_nested_json(content)
+            SQLBotLogUtil.info(f"Question completer extracted JSON: {json_str}")
             if json_str:
                 data = orjson.loads(json_str)
-                return data.get("complete_question", current_question)
-        except Exception:
-            pass
+                result = data.get("complete_question", current_question)
+                SQLBotLogUtil.info(f"Question completer parsed result: {result}")
+                return result
+        except Exception as e:
+            SQLBotLogUtil.error(f"Question completer error: {e}")
 
         return current_question

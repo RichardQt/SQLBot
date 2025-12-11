@@ -1528,6 +1528,12 @@ class LLMService:
             error_msg: str
             if isinstance(e, SingleMessageError):
                 error_msg = str(e)
+                # 如果未开启多轮对话，添加引导提示
+                if _session:
+                    chat = _session.get(Chat, self.chat_question.chat_id)
+                    if chat and not chat.enable_multi_turn:
+                        multi_turn_hint = "\n\n💡 提示：您可以尝试开启多轮对话功能，以便进行更深入的交互和问题澄清哦。"
+                        error_msg = error_msg + multi_turn_hint
             elif isinstance(e, SQLBotDBConnectionError):
                 error_msg = orjson.dumps(
                     {'message': str(e), 'type': 'db-connection-err'}).decode()
