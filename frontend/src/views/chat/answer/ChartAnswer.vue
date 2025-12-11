@@ -42,6 +42,7 @@ const emits = defineEmits([
   'error',
   'stop',
   'scrollBottom',
+  'prefetchRecommend',
   'update:loading',
   'update:chatList',
   'update:currentChat',
@@ -243,9 +244,11 @@ const handleStepEvent = (data: any) => {
   const completedSteps = steps.value.filter((s: ProcessingStep) => s.status === 'completed').length
   overallProgress.value = Math.floor((completedSteps / steps.value.length) * 100)
 
-  // 检查是否全部完成
-  const nonPendingSteps = steps.value.filter((s: ProcessingStep) => s.status !== 'pending').length
-  isCompleted.value = nonPendingSteps === steps.value.length
+  // 检查是否全部完成（所有步骤都不处于 pending 或 processing 状态）
+  const finishedSteps = steps.value.filter(
+    (s: ProcessingStep) => s.status === 'completed' || s.status === 'error' || s.status === 'skipped'
+  ).length
+  isCompleted.value = finishedSteps === steps.value.length
 }
 
 // 跳过所有pending状态的步骤
@@ -263,9 +266,11 @@ const skipPendingSteps = (reason: string = '已跳过') => {
   const completedSteps = steps.value.filter((s: ProcessingStep) => s.status === 'completed').length
   overallProgress.value = Math.floor((completedSteps / steps.value.length) * 100)
 
-  // 检查是否全部完成
-  const nonPendingSteps = steps.value.filter((s: ProcessingStep) => s.status !== 'pending').length
-  isCompleted.value = nonPendingSteps === steps.value.length
+  // 检查是否全部完成（所有步骤都不处于 pending 或 processing 状态）
+  const finishedSteps = steps.value.filter(
+    (s: ProcessingStep) => s.status === 'completed' || s.status === 'error' || s.status === 'skipped'
+  ).length
+  isCompleted.value = finishedSteps === steps.value.length
 }
 
 // 标记正在处理中的步骤为失败,并跳过pending步骤
@@ -293,9 +298,11 @@ const markProcessingAsErrorAndSkipPending = (errorMessage: string) => {
   const completedSteps = steps.value.filter((s: ProcessingStep) => s.status === 'completed').length
   overallProgress.value = Math.floor((completedSteps / steps.value.length) * 100)
 
-  // 检查是否全部完成
-  const nonPendingSteps = steps.value.filter((s: ProcessingStep) => s.status !== 'pending').length
-  isCompleted.value = nonPendingSteps === steps.value.length
+  // 检查是否全部完成（所有步骤都不处于 pending 或 processing 状态）
+  const finishedSteps = steps.value.filter(
+    (s: ProcessingStep) => s.status === 'completed' || s.status === 'error' || s.status === 'skipped'
+  ).length
+  isCompleted.value = finishedSteps === steps.value.length
 
   return hasProcessingStep
 }
@@ -464,6 +471,8 @@ const sendMessage = async () => {
               }
               case 'sql-data':
                 getChatData(_currentChat.value.records[index.value].id)
+                // 提前触发预取推荐问题，不用等到整个流程完成
+                emits('prefetchRecommend', currentRecord.id)
                 break
               case 'chart-result':
                 chart_answer += data.reasoning_content

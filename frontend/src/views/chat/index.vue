@@ -243,6 +243,7 @@
                     @finish="onChartAnswerFinish"
                     @error="onChartAnswerError"
                     @stop="onChatStop"
+                    @prefetch-recommend="onPrefetchRecommend"
                   >
                     <ErrorInfo :error="message.record?.error" class="error-container" />
                     <template #tool>
@@ -735,11 +736,27 @@ function quickAsk(question: string) {
 
 const chartAnswerRef = ref()
 const getRecommendQuestionsLoading = ref(false)
+// 记录已经预取过推荐问题的 recordId，避免重复请求
+const prefetchedRecommendIds = ref<Set<number>>(new Set())
+
+// SQL 数据返回后提前预取推荐问题（异步，不阻塞主流程）
+function onPrefetchRecommend(id: number) {
+  if (id && !prefetchedRecommendIds.value.has(id)) {
+    prefetchedRecommendIds.value.add(id)
+    getRecommendQuestionsLoading.value = true
+    // 异步预取，不阻塞主流程
+    getRecommendQuestions(id)
+  }
+}
+
 async function onChartAnswerFinish(id: number) {
-  getRecommendQuestionsLoading.value = true
   loading.value = false
   isTyping.value = false
-  getRecommendQuestions(id)
+  // 如果还没有预取过，则在完成时获取
+  if (!prefetchedRecommendIds.value.has(id)) {
+    getRecommendQuestionsLoading.value = true
+    getRecommendQuestions(id)
+  }
 }
 
 const loadingOver = () => {
