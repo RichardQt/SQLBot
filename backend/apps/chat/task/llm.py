@@ -65,7 +65,7 @@ dynamic_subsql_prefix = 'select * from sqlbot_dynamic_temp_table_'
 session_maker = scoped_session(sessionmaker(bind=engine, class_=Session))
 
 MIN_STEP_DURATIONS: dict[int, float] = {
-    1: 2.1,
+    1: 0.4,
     2: 0.2,
     3: 1.2
 }
@@ -681,7 +681,8 @@ class LLMService:
                 SQLBotLogUtil.info(f"Question not clear enough: {self.chat_question.question}, suggestion: {suggestion}")
                 unclear_response = orjson.dumps({
                     "success": False,
-                    "message": suggestion or "question_unclear_prompt"
+                    "message": suggestion or "question_unclear_prompt",
+                    "hint": "enable_multi_turn"
                 }).decode()
                 
                 # Log the clarity check result
@@ -1158,6 +1159,33 @@ class LLMService:
                 payload.update(extra)
             return format_step_event(payload)
 
+        def emit_step_error(step_id: int, error_message: str,
+                            extra: Optional[Dict[str, Any]] = None) -> str:
+            metric = step_metrics.get(step_id, {})
+            start_perf = metric.get('start_time')
+            finished_at_iso = datetime.utcnow().isoformat() + 'Z'
+            end_perf = time.perf_counter()
+            duration_ms = None
+            if start_perf is not None:
+                duration_ms = int(max(end_perf - start_perf, 0) * 1000)
+                metric['end_time'] = end_perf
+            payload = {
+                'type': 'step_error',
+                'step_id': step_id,
+                'error': error_message,
+                'message': error_message,
+                'timestamp': finished_at_iso,
+                'finished_at': finished_at_iso,
+            }
+            if metric.get('started_at'):
+                payload['started_at'] = metric['started_at']
+            if duration_ms is not None:
+                payload['duration_ms'] = duration_ms
+                payload['duration_seconds'] = round(duration_ms / 1000, 3)
+            if extra:
+                payload.update(extra)
+            return format_step_event(payload)
+
         try:
             _session = session_maker()
 
@@ -1311,9 +1339,37 @@ class LLMService:
             if in_chat:
                 yield 'data:' + orjson.dumps({'type': 'info', 'msg': 'sql generated'}).decode() + '\n\n'
 
-            # 步骤4: 生成SQL - 完成
+            # 检查SQL生成结果是否成功
+            sql_generation_failed = False
+            sql_error_message = ''
+            sql_error_hint = ''
+            try:
+                json_str = extract_nested_json(full_sql_text)
+                if json_str:
+                    sql_result_data = orjson.loads(json_str)
+                    if not sql_result_data.get('success', True):
+                        sql_generation_failed = True
+                        sql_error_message = sql_result_data.get('message', '无法生成SQL')
+                        sql_error_hint = sql_result_data.get('hint', '')
+            except Exception:
+                pass  # 解析失败时继续正常流程，让后续的check_sql处理
+
+            # 步骤4: 生成SQL - 完成或失败
             if in_chat:
-                yield emit_step_complete(4, 'SQL生成完成')
+                if sql_generation_failed:
+                    yield emit_step_error(4, sql_error_message)
+                    # 发送错误消息到前端
+                    error_data = {
+                        'type': 'error',
+                        'content': sql_error_message
+                    }
+                    if sql_error_hint:
+                        error_data['hint'] = sql_error_hint
+                    yield 'data:' + orjson.dumps(error_data).decode() + '\n\n'
+                    yield 'data:' + orjson.dumps({'type': 'finish'}).decode() + '\n\n'
+                    return
+                else:
+                    yield emit_step_complete(4, 'SQL生成完成')
 
             # filter sql
             SQLBotLogUtil.info(full_sql_text)

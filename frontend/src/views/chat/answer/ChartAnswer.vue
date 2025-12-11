@@ -424,6 +424,15 @@ const sendMessage = async () => {
                 currentRecord.error = data.content
                 // 当发生错误时,将正在进行的步骤标记为失败,并跳过所有pending的步骤
                 markProcessingAsErrorAndSkipPending(data.content || '执行失败')
+                // 如果是因为多轮对话未开启导致的问题不清晰，显示提示
+                if (data.hint === 'enable_multi_turn') {
+                  ElMessage({
+                    message: '💡 开启多轮对话，可以更清晰的理解您的问题哦！',
+                    type: 'info',
+                    duration: 5000,
+                    customClass: 'multi-turn-hint-message',
+                  })
+                }
                 emits('error')
                 break
               case 'datasource': {
@@ -584,3 +593,22 @@ defineExpose({ sendMessage, index: () => index.value, stop })
 </template>
 
 <style scoped lang="less"></style>
+
+<style lang="less">
+.multi-turn-hint-message {
+  background-color: #f0f2f5 !important;
+  border: 1px solid #e4e7ed !important;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1) !important;
+  border-radius: 8px !important;
+  min-width: 300px !important;
+
+  .el-message__content {
+    color: #606266 !important;
+    font-weight: 500;
+  }
+
+  .el-message__icon {
+    color: #909399 !important;
+  }
+}
+</style>
