@@ -11,6 +11,7 @@ from sqlalchemy import and_, select
 from apps.chat.curd.chat import list_chats, get_chat_with_records, create_chat, rename_chat, \
     delete_chat, get_chat_chart_data, get_chat_predict_data, get_chat_with_records_with_data, get_chat_record_by_id, \
     format_json_data, format_json_list_data, update_chat_log_feedback, update_multi_turn_setting
+from apps.chat.curd.question_pool import get_random_questions
 from apps.chat.models.chat_model import CreateChat, ChatRecord, RenameChat, ChatQuestion, ExcelData, UpdateMultiTurn
 from apps.chat.task.llm import LLMService
 from common.core.deps import CurrentAssistant, SessionDep, CurrentUser, Trans
@@ -106,9 +107,22 @@ async def start_chat(session: SessionDep, current_user: CurrentUser):
 
 @router.post("/recommend_questions/{chat_record_id}")
 async def recommend_questions(session: SessionDep, current_user: CurrentUser, chat_record_id: int,
-                              current_assistant: CurrentAssistant):
+                              current_assistant: CurrentAssistant, use_pool: bool = True):
+    """
+    获取推荐问题
+    
+    Args:
+        use_pool: 是否优先从问题池获取，默认True。如果问题池为空则回退到LLM生成
+    """
     def _return_empty():
         yield 'data:' + orjson.dumps({'content': '[]', 'type': 'recommended_question'}).decode() + '\n\n'
+
+    def _return_pool_questions(questions: list):
+        """返回问题池中的问题"""
+        yield 'data:' + orjson.dumps({
+            'content': orjson.dumps(questions).decode(), 
+            'type': 'recommended_question'
+        }).decode() + '\n\n'
 
     try:
         record = get_chat_record_by_id(session, chat_record_id)
@@ -116,6 +130,14 @@ async def recommend_questions(session: SessionDep, current_user: CurrentUser, ch
         if not record:
             return StreamingResponse(_return_empty(), media_type="text/event-stream")
 
+        # 优先从问题池获取
+        if use_pool and record.datasource:
+            oid = current_user.oid if current_user.oid is not None else 1
+            pool_questions = get_random_questions(session, record.datasource, oid, count=4)
+            if pool_questions:
+                return StreamingResponse(_return_pool_questions(pool_questions), media_type="text/event-stream")
+
+        # 问题池为空，回退到LLM生成
         request_question = ChatQuestion(chat_id=record.chat_id, question=record.question if record.question else '')
 
         llm_service = await LLMService.create(session, current_user, request_question, current_assistant, True)
