@@ -19,6 +19,7 @@ import workspace from '@/assets/svg/menu/icon_moments-categories_filled.svg'
 import noWorkspace from '@/assets/svg/menu/icon_moments-categories_outlined.svg'
 import set from '@/assets/svg/menu/icon_setting_filled.svg'
 import noSet from '@/assets/svg/menu/icon-setting.svg'
+import prompt from '@/assets/svg/prompt.svg'
 
 const iconMap = {
   chat,
@@ -37,6 +38,7 @@ const iconMap = {
   noModel,
   embedded,
   noEmbedded,
+  prompt,
 } as { [key: string]: any }
 
 const MenuItem = defineComponent({

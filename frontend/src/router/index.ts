@@ -125,7 +125,11 @@ export const routes = [
         path: '/set/prompt',
         name: 'prompt',
         component: Prompt,
-        meta: { title: t('prompt.customize_prompt_words') },
+        meta: {
+          title: t('prompt.customize_prompt_words'),
+          iconActive: 'prompt',
+          iconDeActive: 'prompt',
+        },
       },
     ],
   },
