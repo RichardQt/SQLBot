@@ -136,6 +136,43 @@ const deriveDuration = (start?: number, end?: number, fallbackMs?: number): numb
   return undefined
 }
 
+// 将步骤“思考过程”内容统一清洗为可展示文本，避免出现 null/undefined/None 等无意义内容
+const normalizeStepText = (value: unknown): string | undefined => {
+  if (value === null || value === undefined) return undefined
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    if (!trimmed) return undefined
+
+    const lowered = trimmed.toLowerCase()
+    if (lowered === 'null' || lowered === 'undefined' || lowered === 'none') {
+      return undefined
+    }
+    return trimmed
+  }
+
+  if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
+    return String(value)
+  }
+
+  try {
+    const json = JSON.stringify(value)
+    return normalizeStepText(json)
+  } catch {
+    return normalizeStepText(String(value))
+  }
+}
+
+const pushStepDetail = (step: ProcessingStep, detail: unknown) => {
+  const text = normalizeStepText(detail)
+  if (!text) return
+
+  if (!step.details) {
+    step.details = []
+  }
+  step.details.push(text)
+}
+
 // 处理步骤事件
 const handleStepEvent = (data: any) => {
   showSteps.value = true
@@ -152,35 +189,26 @@ const handleStepEvent = (data: any) => {
       step.endTime = undefined
       step.durationMs = undefined
       step.error = undefined
-      step.details = data.message ? [data.message] : []
+      step.details = []
+      pushStepDetail(step, data.message)
       break
     case 'step_progress':
       step.progress = data.progress || 0
-      if (!step.details) {
-        step.details = []
-      }
-      if (data.message) {
-        step.details.push(data.message)
-      }
+      pushStepDetail(step, data.message)
       break
     case 'step_content':
-      if (!step.details) {
-        step.details = []
-      }
-      if (data.content) {
-        step.details.push(data.content)
-      }
+      pushStepDetail(step, data.content)
       break
     case 'step_complete':
       step.status = 'completed'
       step.progress = 100
-      if (!step.details) {
-        step.details = []
-      }
       // 更新步骤名称为完成消息（如果包含详细信息如"问题分析完成（完整问题：xxxx）"）
-      if (data.message) {
-        step.name = data.message
-        step.details.push(data.message)
+      {
+        const completedMessage = normalizeStepText(data.message)
+        if (completedMessage) {
+          step.name = completedMessage
+          pushStepDetail(step, completedMessage)
+        }
       }
       step.endTime = parseTimestamp(data.finished_at || data.timestamp)
       if (!step.startTime) {
@@ -217,7 +245,8 @@ const handleStepEvent = (data: any) => {
       break
     case 'step_error':
       step.status = 'error'
-      step.error = data.error || data.message
+      step.error =
+        normalizeStepText(data.error) ?? normalizeStepText(data.message) ?? '步骤执行失败'
       step.endTime = parseTimestamp(data.finished_at || data.timestamp)
       if (!step.startTime) {
         step.startTime = parseTimestamp(data.started_at)
@@ -246,7 +275,8 @@ const handleStepEvent = (data: any) => {
 
   // 检查是否全部完成（所有步骤都不处于 pending 或 processing 状态）
   const finishedSteps = steps.value.filter(
-    (s: ProcessingStep) => s.status === 'completed' || s.status === 'error' || s.status === 'skipped'
+    (s: ProcessingStep) =>
+      s.status === 'completed' || s.status === 'error' || s.status === 'skipped'
   ).length
   isCompleted.value = finishedSteps === steps.value.length
 }
@@ -268,7 +298,8 @@ const skipPendingSteps = (reason: string = '已跳过') => {
 
   // 检查是否全部完成（所有步骤都不处于 pending 或 processing 状态）
   const finishedSteps = steps.value.filter(
-    (s: ProcessingStep) => s.status === 'completed' || s.status === 'error' || s.status === 'skipped'
+    (s: ProcessingStep) =>
+      s.status === 'completed' || s.status === 'error' || s.status === 'skipped'
   ).length
   isCompleted.value = finishedSteps === steps.value.length
 }
@@ -300,7 +331,8 @@ const markProcessingAsErrorAndSkipPending = (errorMessage: string) => {
 
   // 检查是否全部完成（所有步骤都不处于 pending 或 processing 状态）
   const finishedSteps = steps.value.filter(
-    (s: ProcessingStep) => s.status === 'completed' || s.status === 'error' || s.status === 'skipped'
+    (s: ProcessingStep) =>
+      s.status === 'completed' || s.status === 'error' || s.status === 'skipped'
   ).length
   isCompleted.value = finishedSteps === steps.value.length
 
@@ -431,10 +463,10 @@ const sendMessage = async () => {
                 currentRecord.error = data.content
                 // 当发生错误时,将正在进行的步骤标记为失败,并跳过所有pending的步骤
                 markProcessingAsErrorAndSkipPending(data.content || '执行失败')
-                // 如果是因为多轮对话未开启导致的问题不清晰，显示提示
-                if (data.hint === 'enable_multi_turn') {
+                // 如果是因为多轮对话未开启导致的问题不清晰，且当前不是该对话的首个问题，显示提示
+                if (data.hint === 'enable_multi_turn' && index.value > 0) {
                   ElMessage({
-                    message: '💡 开启多轮对话，可以更清晰的理解您的问题哦！',
+                    message: '右下角开启多轮对话，可以更清晰的理解您的问题哦！',
                     type: 'info',
                     duration: 5000,
                     customClass: 'multi-turn-hint-message',
