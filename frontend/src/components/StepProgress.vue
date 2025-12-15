@@ -36,7 +36,9 @@
               </el-icon>
 
               <!-- 步骤标题 -->
-              <span class="step-name">{{ step.name }}</span>
+              <span :class="['step-name', { 'active-title': activeSteps === step.id }]">{{
+                step.name
+              }}</span>
 
               <!-- 步骤状态标签 -->
               <el-tag :type="getStepTagType(step.status)" size="small" class="step-status-tag">
@@ -300,6 +302,10 @@ const getStepStatusText = (status: string) => {
         font-weight: 500;
         line-height: 20px;
         text-align: center;
+
+        &.active-title {
+          font-weight: 600;
+        }
       }
 
       .step-status-tag {
