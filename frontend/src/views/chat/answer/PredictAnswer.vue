@@ -4,6 +4,7 @@ import { chatApi, ChatInfo, type ChatMessage, ChatRecord } from '@/api/chat.ts'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import MdComponent from '@/views/chat/component/MdComponent.vue'
 import ChartBlock from '@/views/chat/chat-block/ChartBlock.vue'
+import { appendMeaningfulText } from '@/utils/text'
 const props = withDefaults(
   defineProps<{
     chatList?: Array<ChatInfo>
@@ -162,7 +163,7 @@ const sendMessage = async () => {
                 emits('error')
                 break
               case 'predict-result':
-                predict_answer += data.reasoning_content
+                predict_answer = appendMeaningfulText(predict_answer, data.reasoning_content)
                 predict_content += data.content
                 _currentChat.value.records[index.value].predict = predict_answer
                 _currentChat.value.records[index.value].predict_content = predict_content

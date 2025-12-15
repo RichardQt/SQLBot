@@ -4,6 +4,7 @@ import { Chat, chatApi, ChatInfo, type ChatMessage, ChatRecord, questionApi } fr
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import ChartBlock from '@/views/chat/chat-block/ChartBlock.vue'
 import StepProgress from '@/components/StepProgress.vue'
+import { appendMeaningfulText } from '@/utils/text'
 
 // 定义步骤类型
 interface ProcessingStep {
@@ -488,7 +489,7 @@ const sendMessage = async () => {
                 break
               }
               case 'sql-result':
-                sql_answer += data.reasoning_content
+                sql_answer = appendMeaningfulText(sql_answer, data.reasoning_content)
                 _currentChat.value.records[index.value].sql_answer = sql_answer
                 break
               case 'sql': {
@@ -507,7 +508,7 @@ const sendMessage = async () => {
                 emits('prefetchRecommend', currentRecord.id)
                 break
               case 'chart-result':
-                chart_answer += data.reasoning_content
+                chart_answer = appendMeaningfulText(chart_answer, data.reasoning_content)
                 _currentChat.value.records[index.value].chart_answer = chart_answer
                 break
               case 'chart': {

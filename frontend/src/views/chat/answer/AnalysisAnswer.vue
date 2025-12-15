@@ -3,6 +3,7 @@ import BaseAnswer from './BaseAnswer.vue'
 import { chatApi, ChatInfo, type ChatMessage, ChatRecord } from '@/api/chat.ts'
 import { computed, nextTick, onBeforeUnmount, ref } from 'vue'
 import MdComponent from '@/views/chat/component/MdComponent.vue'
+import { appendMeaningfulText } from '@/utils/text'
 const props = withDefaults(
   defineProps<{
     chatList?: Array<ChatInfo>
@@ -162,7 +163,10 @@ const sendMessage = async () => {
                 break
               case 'analysis-result':
                 analysis_answer += data.content
-                analysis_answer_thinking += data.reasoning_content
+                analysis_answer_thinking = appendMeaningfulText(
+                  analysis_answer_thinking,
+                  data.reasoning_content
+                )
                 _currentChat.value.records[index.value].analysis = analysis_answer
                 _currentChat.value.records[index.value].analysis_thinking = analysis_answer_thinking
                 break

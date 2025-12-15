@@ -5,6 +5,7 @@
 
 import { ref, reactive, computed } from 'vue'
 import type { Ref } from 'vue'
+import { pickMeaningfulText } from '@/utils/text'
 
 // 事件类型定义
 type EventType =
@@ -192,10 +193,11 @@ export function useEnhancedStreaming() {
     const step = steps.find((s) => s.id === stepId)
     if (step) {
       if (text) step.output.push(text)
-      if (reasoning) {
-        // 处理思考过程的显示
+      const reasoningText = pickMeaningfulText(reasoning)
+      if (reasoningText) {
+        // 处理思考过程的显示（过滤 null/undefined/none 等无意义内容）
         step.metadata.thinking = step.metadata.thinking || []
-        step.metadata.thinking.push(reasoning)
+        step.metadata.thinking.push(reasoningText)
       }
     }
   }

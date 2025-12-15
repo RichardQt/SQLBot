@@ -5,6 +5,7 @@ import MdComponent from '@/views/chat/component/MdComponent.vue'
 import icon_up_outlined from '@/assets/svg/icon_up_outlined.svg'
 import icon_down_outlined from '@/assets/svg/icon_down_outlined.svg'
 import { useI18n } from 'vue-i18n'
+import { pickMeaningfulText } from '@/utils/text'
 
 const props = withDefaults(
   defineProps<{
@@ -37,10 +38,9 @@ const reasoningContent = computed<Array<string>>(() => {
   }
   const result: Array<string> = []
   names.forEach((item) => {
-    if (props.message?.record) {
-      if (props.message?.record[item]) {
-        result.push(props.message?.record[item] ?? '')
-      }
+    const text = pickMeaningfulText(props.message?.record?.[item])
+    if (text) {
+      result.push(text)
     }
   })
   return result
