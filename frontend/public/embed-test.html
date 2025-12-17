@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SQLBot 嵌入式页面测试</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: #f5f6f7;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      text-align: center;
+      color: #1f2329;
+      margin-bottom: 20px;
+      font-size: 24px;
+    }
+
+    .config-panel {
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .config-panel h2 {
+      font-size: 16px;
+      color: #1f2329;
+      margin-bottom: 16px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .form-group {
+      display: flex;
+      align-items: center;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .form-group label {
+      min-width: 100px;
+      color: #646a73;
+      font-size: 14px;
+    }
+
+    .form-group input,
+    .form-group select {
+      flex: 1;
+      min-width: 200px;
+      max-width: 400px;
+      padding: 8px 12px;
+      border: 1px solid #d9dcdf;
+      border-radius: 6px;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+      border-color: #1cba90;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .btn {
+      padding: 10px 24px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: #1cba90;
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: #17a57f;
+    }
+
+    .btn-secondary {
+      background: #f5f6f7;
+      color: #1f2329;
+      border: 1px solid #d9dcdf;
+    }
+
+    .btn-secondary:hover {
+      background: #eee;
+    }
+
+    .test-area {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(480px, 1fr));
+      gap: 20px;
+    }
+
+    .test-card {
+      background: #fff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .test-card-header {
+      padding: 12px 16px;
+      background: #f8f9fa;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .test-card-header h3 {
+      font-size: 14px;
+      color: #1f2329;
+      font-weight: 500;
+    }
+
+    .test-card-header .tag {
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      background: #e8f7f3;
+      color: #1cba90;
+    }
+
+    .iframe-container {
+      width: 100%;
+      height: 640px;
+      position: relative;
+      background: #f5f6f7;
+    }
+
+    .iframe-container iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    .iframe-container.assistant-mode {
+      height: 700px;
+    }
+
+    .placeholder {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: #8f959e;
+      font-size: 14px;
+    }
+
+    .log-panel {
+      background: #fff;
+      border-radius: 12px;
+      padding: 16px;
+      margin-top: 20px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .log-panel h2 {
+      font-size: 14px;
+      color: #1f2329;
+      margin-bottom: 12px;
+    }
+
+    .log-content {
+      background: #1f2329;
+      color: #e8e8e8;
+      border-radius: 6px;
+      padding: 12px;
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .log-content .log-item {
+      margin-bottom: 4px;
+    }
+
+    .log-content .log-time {
+      color: #8f959e;
+    }
+
+    .log-content .log-info {
+      color: #67c23a;
+    }
+
+    .log-content .log-warn {
+      color: #e6a23c;
+    }
+
+    .log-content .log-error {
+      color: #f56c6c;
+    }
+
+    .tips {
+      background: #fff8e6;
+      border: 1px solid #ffeeba;
+      border-radius: 6px;
+      padding: 12px 16px;
+      margin-bottom: 20px;
+      color: #856404;
+      font-size: 13px;
+    }
+
+    .tips strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>🧪 SQLBot 嵌入式页面测试</h1>
+
+    <div class="tips">
+      <strong>💡 使用说明：</strong><br>
+      <strong>小助手嵌入：</strong>输入小助手的数据库 ID（在系统管理→嵌入管理→小助手嵌入表格中查看）<br>
+      <strong>页面嵌入：</strong>输入页面嵌入应用的<b>数据库 ID</b>（可以在数据库 sys_assistant 表中查询，或联系管理员获取）<br>
+      <strong>⚠️ 提示：</strong>数据库 ID 是数字（如 1、2、3），不是 APP ID（如 ZsmSvWeNAjQ=）
+    </div>
+
+    <div class="config-panel">
+      <h2>⚙️ 测试配置</h2>
+      <div class="form-group">
+        <label>服务器地址：</label>
+        <input type="text" id="serverUrl" value="http://localhost:5173" placeholder="如：http://localhost:5173">
+      </div>
+      <div class="form-group">
+        <label>后端API地址：</label>
+        <input type="text" id="apiUrl" value="http://localhost:8000" placeholder="如：http://localhost:8000">
+      </div>
+      <div class="form-group">
+        <label>嵌入类型：</label>
+        <select id="embedType" onchange="toggleEmbedFields()">
+          <option value="assistant">小助手嵌入 (assistant)</option>
+          <option value="page">页面嵌入 (embeddedPage)</option>
+        </select>
+      </div>
+      <div class="form-group" id="idGroup">
+        <label id="idLabel">数据库 ID：</label>
+        <input type="text" id="dbId" placeholder="数据库中的数字 ID（如 1、2、3）">
+      </div>
+      <div class="form-group">
+        <label>在线模式：</label>
+        <select id="onlineMode">
+          <option value="true">在线 (online=true)</option>
+          <option value="false">离线 (online=false)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>显示历史：</label>
+        <select id="showHistory">
+          <option value="true">显示 (history=true)</option>
+          <option value="false">隐藏 (history=false)</option>
+        </select>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-primary" onclick="loadEmbed()">🚀 加载页面</button>
+        <button class="btn btn-secondary" onclick="clearEmbed()">🗑️ 清除</button>
+        <button class="btn btn-secondary" onclick="clearLog()">📋 清除日志</button>
+      </div>
+    </div>
+
+    <div class="test-area">
+      <div class="test-card">
+        <div class="test-card-header">
+          <h3>📱 嵌入预览</h3>
+          <span class="tag" id="embedTag">未加载</span>
+        </div>
+        <div class="iframe-container" id="iframeContainer">
+          <div class="placeholder">
+            请配置参数后点击"加载页面"
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="log-panel">
+      <h2>📝 通信日志</h2>
+      <div class="log-content" id="logContent">
+        <div class="log-item">
+          <span class="log-time">[--:--:--]</span>
+          <span class="log-info">等待加载嵌入页面...</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 切换嵌入类型时更新标签
+    function toggleEmbedFields() {
+      const embedType = document.getElementById('embedType').value;
+      const idLabel = document.getElementById('idLabel');
+      if (embedType === 'assistant') {
+        idLabel.textContent = '小助手数据库 ID：';
+      } else {
+        idLabel.textContent = '页面嵌入数据库 ID：';
+      }
+    }
+
+    // 日志函数
+    function log(message, type = 'info') {
+      const logContent = document.getElementById('logContent');
+      const time = new Date().toLocaleTimeString();
+      const logItem = document.createElement('div');
+      logItem.className = 'log-item';
+      logItem.innerHTML = `<span class="log-time">[${time}]</span> <span class="log-${type}">${message}</span>`;
+      logContent.appendChild(logItem);
+      logContent.scrollTop = logContent.scrollHeight;
+    }
+
+    // 清除日志
+    function clearLog() {
+      const logContent = document.getElementById('logContent');
+      logContent.innerHTML = '<div class="log-item"><span class="log-time">[' + new Date().toLocaleTimeString() + ']</span> <span class="log-info">日志已清除</span></div>';
+    }
+
+    // 获取 token
+    async function getToken(apiUrl, id) {
+      try {
+        const url = `${apiUrl}/api/v1/system/assistant/validator?id=${id}&virtual=${Date.now()}`;
+        log(`正在获取 token...`, 'info');
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        const data = await response.json();
+        log(`获取 token 成功`, 'info');
+        return data.token || null;
+      } catch (error) {
+        log(`获取 token 失败: ${error.message}`, 'error');
+        return null;
+      }
+    }
+
+    // 监听来自 iframe 的消息
+    window.addEventListener('message', async function (event) {
+      const data = event.data;
+      if (data && data.eventName) {
+        if (data.eventName === 'sqlbot_embedded_event' || data.eventName === 'sqlbot_assistant_event') {
+          log(`收到消息: ${JSON.stringify(data)}`, 'info');
+
+          // 如果是 ready 消息，发送 certificate
+          if (data.busi === 'ready' && data.ready) {
+            log('嵌入页面已准备就绪，准备发送认证信息...', 'info');
+            const iframe = document.querySelector('#iframeContainer iframe');
+            if (iframe) {
+              const embedType = document.getElementById('embedType').value;
+              const apiUrl = document.getElementById('apiUrl').value.trim().replace(/\/$/, '');
+
+              let certificate = null;
+              let type = 1;
+
+              if (embedType === 'page') {
+                // 页面嵌入：使用 type=2（测试模式）
+                type = 2;
+                // 从 data-db-id 属性获取数据库 ID
+                const dbId = iframe.getAttribute('data-db-id');
+                if (dbId) {
+                  certificate = await getToken(apiUrl, dbId);
+                }
+                if (!certificate) {
+                  log('⚠️ 警告：未能获取 token，页面可能无法正常工作', 'warn');
+                }
+              }
+              // 小助手嵌入 (type=1) 不需要 certificate，iframe 内部会自己获取 token
+
+              const responseData = {
+                eventName: data.eventName,
+                busi: 'certificate',
+                certificate: certificate,
+                messageId: data.messageId,
+                type: type
+              };
+              iframe.contentWindow.postMessage(responseData, '*');
+              log(`认证信息已发送: type=${type}, certificate=${certificate ? '已获取' : '空'}`, 'info');
+            }
+          }
+        }
+      }
+    });
+
+    // 加载嵌入页面
+    async function loadEmbed() {
+      const serverUrl = document.getElementById('serverUrl').value.trim().replace(/\/$/, '');
+      const apiUrl = document.getElementById('apiUrl').value.trim().replace(/\/$/, '');
+      const embedType = document.getElementById('embedType').value;
+      const onlineMode = document.getElementById('onlineMode').value;
+      const showHistory = document.getElementById('showHistory').value;
+      const dbId = document.getElementById('dbId').value.trim();
+
+      if (!serverUrl) {
+        log('请输入服务器地址！', 'error');
+        alert('请输入服务器地址！');
+        return;
+      }
+
+      if (!apiUrl) {
+        log('请输入后端API地址！', 'error');
+        alert('请输入后端API地址！');
+        return;
+      }
+
+      if (!dbId) {
+        log('请输入数据库 ID！', 'error');
+        alert('请输入数据库 ID！');
+        return;
+      }
+
+      // 验证 ID 是数字
+      if (!/^\d+$/.test(dbId)) {
+        log('❌ 数据库 ID 必须是数字！', 'error');
+        alert('数据库 ID 必须是数字！请输入数字 ID（如 1、2、3），而非 APP ID');
+        return;
+      }
+
+      const container = document.getElementById('iframeContainer');
+      const tag = document.getElementById('embedTag');
+
+      let embedUrl;
+
+      if (embedType === 'page') {
+        // 页面嵌入
+        embedUrl = `${serverUrl}/#/embeddedPage?id=${dbId}&type=2&online=${onlineMode}&history=${showHistory}`;
+        tag.textContent = '页面嵌入(测试)';
+        container.classList.remove('assistant-mode');
+      } else {
+        // 小助手嵌入
+        embedUrl = `${serverUrl}/#/assistant?id=${dbId}&online=${onlineMode}&history=${showHistory}`;
+        tag.textContent = '小助手嵌入';
+        container.classList.add('assistant-mode');
+      }
+
+      log(`正在加载: ${embedUrl}`, 'info');
+
+      // 创建 iframe，并保存数据库 ID 以便后续使用
+      container.innerHTML = `<iframe 
+        src="${embedUrl}" 
+        data-db-id="${dbId}"
+        allow="microphone; clipboard-read; clipboard-write"
+      ></iframe>`;
+
+      log('iframe 已创建，等待页面加载...', 'info');
+    }
+
+    // 清除嵌入
+    function clearEmbed() {
+      const container = document.getElementById('iframeContainer');
+      const tag = document.getElementById('embedTag');
+
+      container.innerHTML = '<div class="placeholder">请配置参数后点击"加载页面"</div>';
+      container.classList.remove('assistant-mode');
+      tag.textContent = '未加载';
+
+      log('嵌入页面已清除', 'warn');
+    }
+
+    // 页面加载完成
+    log('测试页面已加载，请填写参数后点击加载', 'info');
+  </script>
+</body>
+
+</html>

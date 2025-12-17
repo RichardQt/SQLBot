@@ -233,7 +233,7 @@ const getStepStatusText = (status: string) => {
 <style lang="less" scoped>
 .step-progress-card {
   margin-bottom: 16px;
-  border: 1px solid var(--el-border-color-lighter);
+  border: 1px solid var(--ed-border-color-lighter, #dee0e3);
 
   .overall-progress {
     margin-bottom: 20px;
@@ -247,7 +247,7 @@ const getStepStatusText = (status: string) => {
       .progress-title {
         font-size: 16px;
         font-weight: 500;
-        color: var(--el-text-color-primary);
+        color: var(--ed-text-color-primary, #1f2329);
       }
     }
   }
@@ -271,23 +271,23 @@ const getStepStatusText = (status: string) => {
         height: 20px;
 
         &.status-pending {
-          color: var(--el-color-info);
+          color: var(--ed-color-info, #909399);
         }
 
         &.status-processing {
-          color: var(--el-color-primary);
+          color: var(--ed-color-primary, #1cba90);
         }
 
         &.status-completed {
-          color: var(--el-color-success);
+          color: var(--ed-color-success, #67c23a);
         }
 
         &.status-error {
-          color: var(--el-color-danger);
+          color: var(--ed-color-danger, #f56c6c);
         }
 
         &.status-skipped {
-          color: var(--el-color-warning);
+          color: var(--ed-color-warning, #e6a23c);
         }
 
         .rotating {
@@ -318,7 +318,7 @@ const getStepStatusText = (status: string) => {
         flex-shrink: 0;
         min-width: 100px;
         font-size: 12px;
-        color: var(--el-text-color-secondary);
+        color: var(--ed-text-color-secondary, #646a73);
         white-space: nowrap;
         line-height: 20px;
         text-align: left;
@@ -330,7 +330,7 @@ const getStepStatusText = (status: string) => {
 
       .step-result {
         margin-bottom: 16px;
-        border-left: 3px solid var(--el-color-primary);
+        border-left: 3px solid var(--ed-color-primary, #1cba90);
         padding-left: 12px;
 
         .result-label {
@@ -339,12 +339,12 @@ const getStepStatusText = (status: string) => {
           gap: 6px;
           font-size: 13px;
           font-weight: 500;
-          color: var(--el-text-color-primary);
+          color: var(--ed-text-color-primary, #1f2329);
           margin-bottom: 8px;
         }
 
         .result-content {
-          background: var(--el-fill-color-lighter);
+          background: var(--ed-fill-color-lighter, #f5f6f7);
           border-radius: 4px;
           padding: 12px;
           margin-top: 8px;
@@ -354,7 +354,7 @@ const getStepStatusText = (status: string) => {
             font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
             font-size: 13px;
             line-height: 1.6;
-            color: var(--el-text-color-primary);
+            color: var(--ed-text-color-primary, #1f2329);
             white-space: pre-wrap;
             word-wrap: break-word;
             max-height: 300px;
@@ -371,12 +371,12 @@ const getStepStatusText = (status: string) => {
             font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
             font-size: 12px;
             line-height: 1.5;
-            color: var(--el-text-color-primary);
+            color: var(--ed-text-color-primary, #1f2329);
             white-space: pre-wrap;
             word-wrap: break-word;
             max-height: 400px;
             overflow-y: auto;
-            background: var(--el-bg-color);
+            background: var(--ed-bg-color, #ffffff);
             padding: 8px;
             border-radius: 4px;
 
@@ -389,7 +389,7 @@ const getStepStatusText = (status: string) => {
           .text-result {
             font-size: 13px;
             line-height: 1.6;
-            color: var(--el-text-color-regular);
+            color: var(--ed-text-color-regular, #606266);
             word-break: break-word;
           }
         }
@@ -404,7 +404,7 @@ const getStepStatusText = (status: string) => {
           gap: 6px;
           font-size: 13px;
           font-weight: 500;
-          color: var(--el-text-color-secondary);
+          color: var(--ed-text-color-secondary, #646a73);
           margin-bottom: 8px;
         }
 
@@ -416,7 +416,7 @@ const getStepStatusText = (status: string) => {
           li {
             padding: 4px 0;
             font-size: 13px;
-            color: var(--el-text-color-regular);
+            color: var(--ed-text-color-regular, #606266);
           }
         }
       }

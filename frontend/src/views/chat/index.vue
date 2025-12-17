@@ -390,13 +390,16 @@
             </div>
             <div class="chat-settings">
               <el-tooltip content="开启后，AI将结合历史上下文理解您的问题" placement="top">
-                <el-switch
-                  v-model="currentChat.enable_multi_turn"
-                  size="small"
-                  active-text="多轮对话"
-                  :disabled="!currentChat.id"
-                  @change="handleMultiTurnChange"
-                />
+                <div class="multi-turn-wrapper">
+                  <el-switch
+                    v-model="currentChat.enable_multi_turn"
+                    size="small"
+                    :disabled="!currentChat.id"
+                    class="multi-turn-switch"
+                    @change="handleMultiTurnChange"
+                  />
+                  <span class="multi-turn-label">多轮对话</span>
+                </div>
               </el-tooltip>
             </div>
           </div>
@@ -1226,6 +1229,24 @@ const handleMultiTurnChange = async (val: boolean | string | number) => {
           display: flex;
           align-items: center;
           margin-left: auto;
+
+          .multi-turn-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+          }
+
+          .multi-turn-switch {
+            height: 22px;
+          }
+
+          .multi-turn-label {
+            font-size: 12px;
+            font-weight: 400;
+            color: #646a73;
+            line-height: 22px;
+            white-space: nowrap;
+          }
         }
       }
 

@@ -344,19 +344,9 @@ const sendMessage = async () => {
   stopFlag.value = false
   _loading.value = true
 
-  // 重置步骤状态
-  steps.value.forEach((step: ProcessingStep) => {
-    step.status = 'pending'
-    step.progress = 0
-    step.details = []
-    step.error = undefined
-    step.result = ''
-    step.startTime = undefined
-    step.endTime = undefined
-    step.durationMs = undefined
-  })
-  overallProgress.value = 0
-  isCompleted.value = false
+  // 使用统一的重置函数重置步骤状态
+  resetSteps()
+  // 显示进度条
   showSteps.value = true
 
   if (index.value < 0) {
@@ -598,13 +588,42 @@ function stop() {
   emits('stop')
 }
 
+// 重置所有步骤状态到初始值
+const resetSteps = () => {
+  steps.value.forEach((step: ProcessingStep) => {
+    step.status = 'pending'
+    step.progress = 0
+    step.details = []
+    step.error = undefined
+    step.result = ''
+    step.startTime = undefined
+    step.endTime = undefined
+    step.durationMs = undefined
+  })
+  overallProgress.value = 0
+  isCompleted.value = false
+  showSteps.value = false
+  // 重置步骤结果
+  Object.keys(stepResults.value).forEach((key) => {
+    stepResults.value[parseInt(key)] = null
+  })
+}
+
 onBeforeUnmount(() => {
   stop()
+  // 组件卸载时重置状态，避免下次挂载时残留旧状态
+  resetSteps()
 })
 
 onMounted(() => {
+  // 确保初始状态正确
   if (props.message?.record?.id && props.message?.record?.finish) {
+    // 历史记录，不显示进度条
+    showSteps.value = false
     getChatData(props.message.record.id)
+  } else if (!props.message?.record?.finish && props.loading) {
+    // 正在进行的问答，确保进度条状态正确
+    resetSteps()
   }
 })
 
