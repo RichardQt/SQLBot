@@ -1,6 +1,6 @@
 services:
   sqlbot:
-    image: registry.cn-heyuan.aliyuncs.com/images-lsr/sqlbot_fx:v2.1.0
+    image: registry.cn-heyuan.aliyuncs.com/images-lsr/sqlbot_fx:v2.2.0
     container_name: sqlbot_fx
     restart: always
     privileged: true
@@ -27,7 +27,7 @@ services:
       # 生成方法: python -c "import secrets; print(secrets.token_urlsafe(32))"
       SECRET_KEY: VCzmavK0pvnXJ89W6_IENxvRaFa1oGqEnsvomGTTD2Y
       # CORS settings
-      BACKEND_CORS_ORIGINS: "http://localhost,http://localhost:5173,http://localhost:808,http://localhost:8000,https://localhost,https://localhost:5173"
+      BACKEND_CORS_ORIGINS: "http://localhost,http://localhost:5173,http://localhost:808,http://localhost:8000,https://localhost,https://localhost:5173,http://10.189.91.1/:8000,http://10.189.91.1/:5000"
       # Logging
       LOG_LEVEL: "INFO"
       SQL_DEBUG: False

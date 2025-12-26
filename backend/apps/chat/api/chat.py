@@ -107,12 +107,12 @@ async def start_chat(session: SessionDep, current_user: CurrentUser):
 
 @router.post("/recommend_questions/{chat_record_id}")
 async def recommend_questions(session: SessionDep, current_user: CurrentUser, chat_record_id: int,
-                              current_assistant: CurrentAssistant, use_pool: bool = True):
+                              current_assistant: CurrentAssistant):
     """
-    获取推荐问题
+    获取推荐问题（从问题池随机获取4个）
     
-    Args:
-        use_pool: 是否优先从问题池获取，默认True。如果问题池为空则回退到LLM生成
+    无论是"猜你想问"还是"继续提问"，都从问题池中随机获取4个问题。
+    如果问题池为空，则返回空数组。
     """
     def _return_empty():
         yield 'data:' + orjson.dumps({'content': '[]', 'type': 'recommended_question'}).decode() + '\n\n'
@@ -130,19 +130,15 @@ async def recommend_questions(session: SessionDep, current_user: CurrentUser, ch
         if not record:
             return StreamingResponse(_return_empty(), media_type="text/event-stream")
 
-        # 优先从问题池获取
-        if use_pool and record.datasource:
+        # 从问题池随机获取4个问题
+        if record.datasource:
             oid = current_user.oid if current_user.oid is not None else 1
             pool_questions = get_random_questions(session, record.datasource, oid, count=4)
-            if pool_questions:
-                return StreamingResponse(_return_pool_questions(pool_questions), media_type="text/event-stream")
+            return StreamingResponse(_return_pool_questions(pool_questions), media_type="text/event-stream")
+        
+        # 没有数据源，返回空
+        return StreamingResponse(_return_empty(), media_type="text/event-stream")
 
-        # 问题池为空，回退到LLM生成
-        request_question = ChatQuestion(chat_id=record.chat_id, question=record.question if record.question else '')
-
-        llm_service = await LLMService.create(session, current_user, request_question, current_assistant, True)
-        llm_service.set_record(record)
-        llm_service.run_recommend_questions_task_async()
     except Exception as e:
         traceback.print_exc()
 
@@ -150,8 +146,6 @@ async def recommend_questions(session: SessionDep, current_user: CurrentUser, ch
             yield 'data:' + orjson.dumps({'content': str(_e), 'type': 'error'}).decode() + '\n\n'
 
         return StreamingResponse(_err(e), media_type="text/event-stream")
-
-    return StreamingResponse(llm_service.await_result(), media_type="text/event-stream")
 
 
 @router.post("/question")

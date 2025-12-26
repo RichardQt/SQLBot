@@ -35,7 +35,6 @@ from apps.chat.models.chat_model import ChatQuestion, ChatRecord, Chat, RenameCh
     ChatFinishStep
 from apps.chat.task.context_analyzer import ContextAnalyzer
 from apps.chat.task.question_completer import QuestionCompleter
-from apps.chat.task.question_clarity_checker import QuestionClarityChecker
 from apps.data_training.curd.data_training import get_training_template
 from apps.datasource.crud.datasource import get_table_schema
 from apps.datasource.crud.permission import get_row_permission_filters, is_normal_user
@@ -664,52 +663,6 @@ class LLMService:
             raise _error
 
     def generate_sql(self, _session: Session):
-        # Check if multi-turn is disabled and question clarity check is needed
-        chat = _session.get(Chat, self.chat_question.chat_id)
-        enable_multi_turn = chat.enable_multi_turn if chat else False
-        
-        # When multi-turn is disabled, check if the question is clear enough
-        if not enable_multi_turn:
-            clarity_checker = QuestionClarityChecker(self.llm, self.chat_question.lang)
-            is_clear, suggestion = clarity_checker.check_clarity(
-                self.chat_question.question,
-                self.chat_question.db_schema or ""
-            )
-            
-            if not is_clear:
-                # Return a prompt message instead of generating SQL
-                SQLBotLogUtil.info(f"Question not clear enough: {self.chat_question.question}, suggestion: {suggestion}")
-                unclear_response = orjson.dumps({
-                    "success": False,
-                    "message": suggestion or "question_unclear_prompt",
-                    "hint": "enable_multi_turn"
-                }).decode()
-                
-                # Log the clarity check result
-                self.current_logs[OperationEnum.GENERATE_SQL] = start_log(
-                    session=_session,
-                    ai_modal_id=self.chat_question.ai_modal_id,
-                    ai_modal_name=self.chat_question.ai_modal_name,
-                    operate=OperationEnum.GENERATE_SQL,
-                    record_id=self.record.id,
-                    full_message=[{'type': 'system', 'content': 'Question clarity check failed'}]
-                )
-                self.current_logs[OperationEnum.GENERATE_SQL] = end_log(
-                    session=_session,
-                    log=self.current_logs[OperationEnum.GENERATE_SQL],
-                    full_message=[{'type': 'system', 'content': 'Question clarity check failed'},
-                                  {'type': 'ai', 'content': unclear_response}],
-                    reasoning_content='',
-                    token_usage={}
-                )
-                self.record = save_sql_answer(
-                    session=_session, 
-                    record_id=self.record.id,
-                    answer=orjson.dumps({'content': unclear_response}).decode()
-                )
-                yield {'content': unclear_response}
-                return
-        
         # append current question
         self.sql_message.append(HumanMessage(
             self.chat_question.sql_user_question(current_time=datetime.now().strftime('%Y-%m-%d %H:%M:%S'))))
@@ -1358,10 +1311,15 @@ class LLMService:
             if in_chat:
                 if sql_generation_failed:
                     yield emit_step_error(4, sql_error_message)
-                    # 发送错误消息到前端
+                    # 发送错误消息到前端 - 使用 generate-sql-err 类型标识
+                    # content 包含类型信息供前端识别，同时保留原始消息用于调试
+                    error_content = orjson.dumps({
+                        'type': 'generate-sql-err',
+                        'message': sql_error_message
+                    }).decode()
                     error_data = {
                         'type': 'error',
-                        'content': sql_error_message
+                        'content': error_content
                     }
                     if sql_error_hint:
                         error_data['hint'] = sql_error_hint
@@ -1583,21 +1541,21 @@ class LLMService:
             traceback.print_exc()
             error_msg: str
             if isinstance(e, SingleMessageError):
-                error_msg = str(e)
-                # 如果未开启多轮对话，添加引导提示
-                if _session:
-                    chat = _session.get(Chat, self.chat_question.chat_id)
-                    if chat and not chat.enable_multi_turn:
-                        multi_turn_hint = "\n\n💡 提示：您可以尝试开启多轮对话功能，以便进行更深入的交互和问题澄清哦。"
-                        error_msg = error_msg + multi_turn_hint
+                # SQL 生成错误 - 只返回类型标识，前端显示友好提示
+                error_msg = orjson.dumps({
+                    'type': 'generate-sql-err'
+                }).decode()
             elif isinstance(e, SQLBotDBConnectionError):
                 error_msg = orjson.dumps(
-                    {'message': str(e), 'type': 'db-connection-err'}).decode()
+                    {'type': 'db-connection-err'}).decode()
             elif isinstance(e, SQLBotDBError):
-                error_msg = orjson.dumps(
-                    {'message': 'Execute SQL Failed', 'traceback': str(e), 'type': 'exec-sql-err'}).decode()
+                # SQL 执行错误 - 只返回类型标识，前端显示友好提示
+                error_msg = orjson.dumps({
+                    'type': 'exec-sql-err'
+                }).decode()
             else:
-                error_msg = orjson.dumps({'message': str(e), 'traceback': traceback.format_exc(limit=1)}).decode()
+                # 通用错误 - 只返回类型标识
+                error_msg = orjson.dumps({'type': 'general-err'}).decode()
             if _session:
                 self.save_error(session=_session, message=error_msg)
             if in_chat:

@@ -634,7 +634,11 @@
     "data_over_limit": "데이터량이 너무 많아 앞의 {0}개 데이터만 표시합니다",
     "ds_is_invalid": "데이터 소스가 유효하지 않습니다",
     "error": "오류",
+    "error-friendly": "다시 시도해 주세요~",
     "exec-sql-err": "SQL 실행 실패",
+    "exec-sql-err-friendly": "질문을 명확하게 해주시거나 다시 시도해 주세요~",
+    "generate-sql-err-friendly": "다시 시도해 주세요~",
+    "multi_turn_tip": "💡 팁: 오른쪽 하단의 [멀티턴 대화]를 활성화하면 AI가 질문을 더 잘 이해할 수 있습니다!",
     "no_data": "데이터가 없습니다",
     "show_error_detail": "구체적인 정보 보기"
   },

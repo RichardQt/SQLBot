@@ -4,6 +4,9 @@ import type { ChatMessage } from '@/api/chat.ts'
 import { chatApi } from '@/api/chat.ts'
 import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
+import { useAssistantStore } from '@/stores/assistant'
+
+const assistantStore = useAssistantStore()
 
 const props = defineProps<{
   message: ChatMessage
@@ -36,10 +39,16 @@ const handleFeedback = async (type: 'like' | 'dislike', logType: 'sql' | 'chart'
       }
     }
 
-    ElMessage.success('反馈已提交')
+    // 嵌入模式下不显示反馈提示
+    if (!assistantStore.pageEmbedded) {
+      ElMessage.success('反馈已提交')
+    }
   } catch (error) {
     console.error('Failed to submit feedback:', error)
-    ElMessage.error('反馈提交失败')
+    // 嵌入模式下不显示错误提示
+    if (!assistantStore.pageEmbedded) {
+      ElMessage.error('反馈提交失败')
+    }
   }
 }
 </script>
@@ -112,7 +121,7 @@ const handleFeedback = async (type: 'like' | 'dislike', logType: 'sql' | 'chart'
 </template>
 
 <style scoped lang="less">
-.tool-container {  
+.tool-container {
   display: flex;
   flex-direction: row;
   align-items: center;

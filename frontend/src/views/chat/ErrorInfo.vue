@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useAssistantStore } from '@/stores/assistant.ts'
 
 const props = defineProps<{
   error?: string
@@ -9,79 +8,74 @@ const props = defineProps<{
 
 const { t } = useI18n()
 
-const assistantStore = useAssistantStore()
-const isCompletePage = computed(() => !assistantStore.getAssistant || assistantStore.getEmbedded)
-
 const showBlock = computed(() => {
   return props.error && props.error?.trim().length > 0
 })
 
-const errorMessage = computed(() => {
-  const obj = { message: props.error, showMore: false, traceback: '', type: undefined }
+const errorType = computed(() => {
   if (showBlock.value && props.error?.trim().startsWith('{') && props.error?.trim().endsWith('}')) {
     try {
       const json = JSON.parse(props.error?.trim())
-      obj.message = json['message']
-      obj.traceback = json['traceback']
-      obj.type = json['type']
-      if (obj.traceback?.trim().length > 0) {
-        obj.showMore = true
-      }
+      return json['type']
     } catch (e) {
       console.error(e)
     }
   }
-  return obj
+  return undefined
 })
 
-const show = ref(false)
+// 控制多轮对话提示框的显示
+const showMultiTurnTip = ref(true)
 
-function showTraceBack() {
-  show.value = true
+// 关闭多轮对话提示框
+const closeMultiTurnTip = () => {
+  showMultiTurnTip.value = false
 }
+
+// 判断是否应该显示多轮对话提示框（生成SQL错误或执行SQL错误时显示）
+const shouldShowMultiTurnTip = computed(() => {
+  return (
+    (errorType.value === 'generate-sql-err' || errorType.value === 'exec-sql-err') &&
+    showMultiTurnTip.value
+  )
+})
 </script>
 
 <template>
   <div v-if="showBlock">
-    <div
-      v-if="!errorMessage.showMore && errorMessage.type == undefined"
-      v-dompurify-html="errorMessage.message"
-      class="error-container"
-    ></div>
-    <div v-else class="error-container row">
-      <template v-if="errorMessage.type === 'db-connection-err'">
+    <div class="error-container">
+      <template v-if="errorType === 'db-connection-err'">
         {{ t('chat.ds_is_invalid') }}
       </template>
-      <template v-else-if="errorMessage.type === 'exec-sql-err'">
-        {{ t('chat.exec-sql-err') }}
+      <template v-else-if="errorType === 'exec-sql-err'">
+        {{ t('chat.exec-sql-err-friendly') }}
+      </template>
+      <template v-else-if="errorType === 'generate-sql-err'">
+        {{ t('chat.generate-sql-err-friendly') }}
       </template>
       <template v-else>
-        {{ t('chat.error') }}
+        {{ t('chat.error-friendly') }}
       </template>
-      <el-button v-if="errorMessage.showMore" text @click="showTraceBack">
-        {{ t('chat.show_error_detail') }}
-      </el-button>
     </div>
 
-    <el-drawer
-      v-model="show"
-      :size="!isCompletePage ? '100%' : '600px'"
-      :title="t('chat.error')"
-      direction="rtl"
-      body-class="chart-sql-error-body"
-    >
-      <el-main>
-        <div v-dompurify-html="errorMessage.traceback" class="error-container open"></div>
-      </el-main>
-    </el-drawer>
+    <!-- 多轮对话引导提示框 - 在生成SQL错误或执行SQL错误时显示 -->
+    <div v-if="shouldShowMultiTurnTip" class="multi-turn-tip">
+      <div class="tip-content">
+        <el-icon class="tip-icon"><InfoFilled /></el-icon>
+        <span class="tip-text">{{ t('chat.multi_turn_tip') }}</span>
+      </div>
+      <el-icon class="close-icon" @click="closeMultiTurnTip"><Close /></el-icon>
+    </div>
   </div>
 </template>
 
-<style lang="less">
-.chart-sql-error-body {
-  padding: 0;
+<script lang="ts">
+import { InfoFilled, Close } from '@element-plus/icons-vue'
+export default {
+  components: { InfoFilled, Close },
 }
-</style>
+</script>
+
 <style scoped lang="less">
 .error-container {
   font-weight: 400;
@@ -90,15 +84,44 @@ function showTraceBack() {
   color: rgba(31, 35, 41, 1);
   white-space: pre-wrap;
   word-break: break-word;
+}
 
-  &.row {
+.multi-turn-tip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, #e8f4ff 0%, #f0f7ff 100%);
+  border: 1px solid #b3d8ff;
+  border-radius: 8px;
+
+  .tip-content {
     display: flex;
-    flex-direction: row;
     align-items: center;
+    gap: 8px;
+
+    .tip-icon {
+      color: #409eff;
+      font-size: 16px;
+    }
+
+    .tip-text {
+      font-size: 14px;
+      color: #606266;
+      line-height: 20px;
+    }
   }
-  &.open {
+
+  .close-icon {
+    color: #909399;
     font-size: 14px;
-    line-height: 20px;
+    cursor: pointer;
+    transition: color 0.2s;
+
+    &:hover {
+      color: #606266;
+    }
   }
 }
 </style>

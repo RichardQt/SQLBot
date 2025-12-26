@@ -634,7 +634,11 @@
     "data_over_limit": "The data is too large, only the first {0} entries are displayed.",
     "ds_is_invalid": "Datasource is invalid",
     "error": "Error",
+    "error-friendly": "Please try again~",
     "exec-sql-err": "Execute SQL failed",
+    "exec-sql-err-friendly": "Please clarify your question or try again~",
+    "generate-sql-err-friendly": "Please try again~",
+    "multi_turn_tip": "💡 Tip: Enable [Multi-turn Chat] at the bottom right, and AI can better understand your questions!",
     "no_data": "No Data",
     "show_error_detail": "Show error info"
   },
