@@ -394,7 +394,7 @@
                   <el-switch
                     v-model="currentChat.enable_multi_turn"
                     size="small"
-                    :disabled="!currentChat.id"
+                    :disabled="isCompletePage && !currentChat.id"
                     class="multi-turn-switch"
                     @change="handleMultiTurnChange"
                   />
@@ -606,6 +606,10 @@ const handleScroll = (val: any) => {
 const createNewChatSimple = async () => {
   currentChat.value = new ChatInfo()
   currentChatId.value = undefined
+  // 用户主动新建对话时，清除保存的对话 ID
+  if (assistantStore.getAssistant) {
+    assistantStore.clearSavedChatId()
+  }
   await createNewChat()
 }
 
@@ -664,6 +668,10 @@ function getChatList(callback?: () => void) {
 
 function onClickHistory(chat: ChatInfo) {
   scrollToBottom()
+  // 助手模式下保存当前对话 ID
+  if (assistantStore.getAssistant && chat?.id) {
+    assistantStore.saveCurrentChatId(chat.id)
+  }
   forEach(chat?.records, (record: ChatRecord) => {
     // getChatData(record.id)
     if (record.predict_record_id) {
@@ -678,6 +686,10 @@ const currentChatEngineType = computed(() => {
 
 function onChatDeleted(id: number) {
   console.info('deleted', id)
+  // 如果删除的是当前保存的对话，清除保存的 ID
+  if (assistantStore.getAssistant && assistantStore.getSavedChatId() === id) {
+    assistantStore.clearSavedChatId()
+  }
 }
 
 function onChatRenamed(chat: Chat) {
@@ -701,6 +713,10 @@ function onChatCreatedQuick(chat: ChatInfo) {
   chatList.value.unshift(chat)
   currentChatId.value = chat.id
   currentChat.value = chat
+  // 助手模式下保存当前对话 ID，以便页面刷新后恢复
+  if (assistantStore.getAssistant) {
+    assistantStore.saveCurrentChatId(chat.id)
+  }
   onChatCreated(chat)
 }
 
@@ -778,8 +794,9 @@ function onChatStop() {
   console.debug('onChatStop')
 }
 const assistantPrepareSend = async () => {
+  // 在助手模式下（包括浮动助手和页面嵌入模式），如果没有对话则创建
   if (
-    !isCompletePage.value &&
+    assistantStore.getAssistant &&
     (currentChatId.value == null || typeof currentChatId.value == 'undefined')
   ) {
     const assistantChat = await assistantStore.setChat()
@@ -1027,11 +1044,8 @@ const assistantPrepareInit = async () => {
     inset: '0px auto auto 0px',
   })
   goEmpty()
-  // 嵌入模式下预先创建对话，以便多轮对话按钮能立即显示
-  const assistantChat = await assistantStore.setChat()
-  if (assistantChat) {
-    onChatCreatedQuick(assistantChat as any)
-  }
+  // 嵌入模式下不再预先创建对话，而是在用户发送第一条消息时创建
+  // 这样可以避免产生无用的空对话记录
   onClickOutside(floatPopoverRef, (event: any) => {
     if (floatPopoverVisible.value) {
       let parentElement: any = event.target
@@ -1067,25 +1081,50 @@ function jumpCreatChat() {
   }
 }
 
-// 页面嵌入模式下预创建对话
-const pageEmbeddedPrepareInit = async () => {
-  if (!props.pageEmbedded) {
-    return
-  }
-  // 页面嵌入模式下预先创建对话，以便多轮对话按钮能立即显示
-  const assistantChat = await assistantStore.setChat()
-  if (assistantChat) {
-    onChatCreatedQuick(assistantChat as any)
+// 嵌入式模式下尝试恢复之前的对话
+function tryRestoreSavedChat() {
+  // 只有在助手模式下才尝试恢复（包括浮动助手和页面嵌入模式）
+  if (!assistantStore.getAssistant) return
+  const savedChatId = assistantStore.getSavedChatId()
+  if (savedChatId && chatList.value.length > 0) {
+    // 查找保存的对话是否存在于列表中
+    const savedChat = chatList.value.find((c: ChatInfo) => c.id === savedChatId)
+    if (savedChat) {
+      // 恢复到之前的对话
+      currentChatId.value = savedChat.id
+      currentChat.value = new ChatInfo(savedChat)
+      loading.value = true
+      chatApi.get(savedChatId).then((res) => {
+        const info = chatApi.toChatInfo(res)
+        if (info && info.id === currentChatId.value) {
+          currentChat.value = info
+        }
+      }).finally(() => {
+        loading.value = false
+      })
+      return
+    }
   }
 }
 
 onMounted(() => {
-  getChatList(jumpCreatChat)
+  getChatList(() => {
+    jumpCreatChat()
+    // 嵌入式模式下尝试恢复之前的对话
+    tryRestoreSavedChat()
+  })
   assistantPrepareInit()
-  pageEmbeddedPrepareInit()
 })
 
 const handleMultiTurnChange = async (val: boolean | string | number) => {
+  // 只有在用户手动切换时才处理，页面初始化时不创建对话
+  // 如果没有对话ID且在页面嵌入模式，不自动创建空对话
+  if (!currentChat.value.id) {
+    // 如果是在助手模式但不是完整页面，不创建对话，等用户发送消息时再创建
+    if (!isCompletePage.value) {
+      return
+    }
+  }
   if (!currentChat.value.id) return
   try {
     await chatApi.updateMultiTurn(currentChat.value.id, !!val)

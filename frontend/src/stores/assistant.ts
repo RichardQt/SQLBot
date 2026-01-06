@@ -5,6 +5,7 @@ import { useCache } from '@/utils/useCache'
 
 const { wsCache } = useCache()
 const flagKey = 'sqlbit-assistant-flag'
+const currentChatKey = 'sqlbot-assistant-current-chat'
 type Resolver<T = any> = (value: T | PromiseLike<T>) => void
 type Rejecter = (reason?: any) => void
 interface PendingRequest<T = any> {
@@ -137,6 +138,27 @@ export const AssistantStore = defineStore('assistant', {
     },
     setHistory(history: boolean) {
       this.history = history ?? true
+    },
+    // 保存当前对话 ID 到 sessionStorage（嵌入式模式下使用）
+    saveCurrentChatId(chatId: number | undefined) {
+      if (this.assistant && chatId) {
+        const key = `${currentChatKey}-${this.id}`
+        sessionStorage.setItem(key, String(chatId))
+      }
+    },
+    // 获取保存的对话 ID
+    getSavedChatId(): number | undefined {
+      if (!this.assistant || !this.id) return undefined
+      const key = `${currentChatKey}-${this.id}`
+      const saved = sessionStorage.getItem(key)
+      return saved ? parseInt(saved, 10) : undefined
+    },
+    // 清除保存的对话 ID
+    clearSavedChatId() {
+      if (this.id) {
+        const key = `${currentChatKey}-${this.id}`
+        sessionStorage.removeItem(key)
+      }
     },
     async setChat() {
       if (!this.assistant) {

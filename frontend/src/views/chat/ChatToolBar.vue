@@ -40,13 +40,13 @@ const handleFeedback = async (type: 'like' | 'dislike', logType: 'sql' | 'chart'
     }
 
     // 嵌入模式下不显示反馈提示
-    if (!assistantStore.pageEmbedded) {
+    if (!assistantStore.getPageEmbedded) {
       ElMessage.success('反馈已提交')
     }
   } catch (error) {
     console.error('Failed to submit feedback:', error)
     // 嵌入模式下不显示错误提示
-    if (!assistantStore.pageEmbedded) {
+    if (!assistantStore.getPageEmbedded) {
       ElMessage.error('反馈提交失败')
     }
   }
