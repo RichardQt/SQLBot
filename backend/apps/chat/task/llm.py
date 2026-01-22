@@ -41,7 +41,7 @@ from apps.datasource.crud.permission import get_row_permission_filters, is_norma
 from apps.datasource.embedding.ds_embedding import get_ds_embedding
 from apps.datasource.models.datasource import CoreDatasource
 from apps.db.db import exec_sql, get_version, check_connection
-from apps.system.crud.assistant import AssistantOutDs, AssistantOutDsFactory, get_assistant_ds
+from apps.system.crud.assistant import AssistantOutDs, AssistantOutDsFactory,  get_assistant_ds
 from apps.system.schemas.system_schema import AssistantOutDsSchema
 from apps.terminology.curd.terminology import get_terminology_template
 from apps.chat.task.context_analyzer import ContextAnalyzer

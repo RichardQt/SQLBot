@@ -1094,14 +1094,17 @@ function tryRestoreSavedChat() {
       currentChatId.value = savedChat.id
       currentChat.value = new ChatInfo(savedChat)
       loading.value = true
-      chatApi.get(savedChatId).then((res) => {
-        const info = chatApi.toChatInfo(res)
-        if (info && info.id === currentChatId.value) {
-          currentChat.value = info
-        }
-      }).finally(() => {
-        loading.value = false
-      })
+      chatApi
+        .get(savedChatId)
+        .then((res) => {
+          const info = chatApi.toChatInfo(res)
+          if (info && info.id === currentChatId.value) {
+            currentChat.value = info
+          }
+        })
+        .finally(() => {
+          loading.value = false
+        })
       return
     }
   }

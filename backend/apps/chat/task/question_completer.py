@@ -5,7 +5,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from apps.template.multi_turn.generator import get_question_complete_template
 from common.utils.utils import extract_nested_json, SQLBotLogUtil
 
-
+#问题补全
 class QuestionCompleter:
     """负责生成完整问题"""
 

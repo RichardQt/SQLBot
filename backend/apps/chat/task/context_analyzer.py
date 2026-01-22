@@ -6,6 +6,7 @@ from apps.template.multi_turn.generator import get_context_analysis_template
 from common.utils.utils import extract_nested_json
 
 
+#多轮对话意图识别
 class ContextAnalyzer:
     """负责分析问题之间的关联性"""
 
