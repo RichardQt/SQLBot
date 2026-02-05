@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 
 from apps.chat.api import chat, enhanced_chat, question_pool
-from apps.dashboard.api import dashboard_api
+from apps.dashboard.api import dashboard_api, article_detail_api
 from apps.data_training.api import data_training
 from apps.datasource.api import datasource, table_relation
 from apps.mcp import mcp
@@ -22,5 +22,6 @@ api_router.include_router(chat.router)
 api_router.include_router(enhanced_chat.router, prefix='/chat', tags=['chat'])
 api_router.include_router(question_pool.router)
 api_router.include_router(dashboard_api.router)
+api_router.include_router(article_detail_api.router)
 api_router.include_router(mcp.router)
 api_router.include_router(table_relation.router)

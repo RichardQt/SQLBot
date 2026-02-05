@@ -7,7 +7,7 @@ node_modules/
 *.lock
 *-lock.json
 components.d.ts
-
+.github
 #pg数据
 data/
 
