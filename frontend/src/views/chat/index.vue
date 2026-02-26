@@ -1,50 +1,29 @@
 <template>
   <div class="chat-page-wrapper">
-  <el-popover
-    v-if="assistantStore.assistant && !assistantStore.pageEmbedded && assistantStore.type != 4"
-    :width="280"
-    placement="bottom-start"
-    popper-class="popover-chat_history popover-chat_history_small"
-  >
-    <template #reference>
-      <el-icon
-        class="show-history_icon"
-        :class="{ 'embedded-history-hidden': embeddedHistoryHidden }"
-        style=""
-        size="20"
-        @click="showFloatPopover"
-      >
-        <icon_sidebar_outlined></icon_sidebar_outlined>
-      </el-icon>
-    </template>
-    <ChatListContainer
-      ref="floatPopoverRef"
-      v-model:chat-list="chatList"
-      v-model:current-chat-id="currentChatId"
-      v-model:current-chat="currentChat"
-      v-model:loading="loading"
-      in-popover
-      :app-name="customName"
-      @go-empty="goEmpty"
-      @on-chat-created="onChatCreated"
-      @on-click-history="onClickHistory"
-      @on-chat-deleted="onChatDeleted"
-      @on-chat-renamed="onChatRenamed"
-      @on-click-side-bar-btn="hideSideBar"
-    />
-  </el-popover>
-  <el-container class="chat-container no-padding">
-    <el-aside
-      v-if="(isCompletePage || pageEmbedded) && chatListSideBarShow"
-      class="chat-container-left"
-      :class="{ 'embedded-history-hidden': embeddedHistoryHidden }"
+    <el-popover
+      v-if="assistantStore.assistant && !assistantStore.pageEmbedded && assistantStore.type != 4"
+      :width="280"
+      placement="bottom-start"
+      popper-class="popover-chat_history popover-chat_history_small"
     >
+      <template #reference>
+        <el-icon
+          class="show-history_icon"
+          :class="{ 'embedded-history-hidden': embeddedHistoryHidden }"
+          style=""
+          size="20"
+          @click="showFloatPopover"
+        >
+          <icon_sidebar_outlined></icon_sidebar_outlined>
+        </el-icon>
+      </template>
       <ChatListContainer
+        ref="floatPopoverRef"
         v-model:chat-list="chatList"
         v-model:current-chat-id="currentChatId"
         v-model:current-chat="currentChat"
         v-model:loading="loading"
-        :in-popover="!chatListSideBarShow"
+        in-popover
         :app-name="customName"
         @go-empty="goEmpty"
         @on-chat-created="onChatCreated"
@@ -53,31 +32,14 @@
         @on-chat-renamed="onChatRenamed"
         @on-click-side-bar-btn="hideSideBar"
       />
-    </el-aside>
-
-    <div
-      v-if="(!isCompletePage && !pageEmbedded) || !chatListSideBarShow"
-      class="hidden-sidebar-btn"
-      :class="{
-        'assistant-popover-sidebar': !isCompletePage && !pageEmbedded,
-        'embedded-history-hidden': embeddedHistoryHidden,
-      }"
-    >
-      <el-popover
-        :width="280"
-        placement="bottom-start"
-        popper-class="popover-chat_history"
-        :popper-style="{ ...defaultFloatPopoverStyle }"
+    </el-popover>
+    <el-container class="chat-container no-padding">
+      <el-aside
+        v-if="(isCompletePage || pageEmbedded) && chatListSideBarShow"
+        class="chat-container-left"
+        :class="{ 'embedded-history-hidden': embeddedHistoryHidden }"
       >
-        <template #reference>
-          <el-button link type="primary" class="icon-btn" @click="showSideBar">
-            <el-icon>
-              <icon_sidebar_outlined />
-            </el-icon>
-          </el-button>
-        </template>
         <ChatListContainer
-          ref="floatPopoverRef"
           v-model:chat-list="chatList"
           v-model:current-chat-id="currentChatId"
           v-model:current-chat="currentChat"
@@ -91,351 +53,400 @@
           @on-chat-renamed="onChatRenamed"
           @on-click-side-bar-btn="hideSideBar"
         />
-      </el-popover>
+      </el-aside>
 
-      <el-drawer
-        v-model="floatPopoverVisible"
-        :with-header="false"
-        :modal="false"
-        direction="ltr"
-        size="278"
-        modal-class="assistant-popover_sidebar"
-        :before-close="hideSideBar"
-      >
-        <ChatListContainer
-          ref="floatPopoverRef"
-          v-model:chat-list="chatList"
-          v-model:current-chat-id="currentChatId"
-          v-model:current-chat="currentChat"
-          v-model:loading="loading"
-          :app-name="customName"
-          :in-popover="false"
-          @go-empty="goEmpty"
-          @on-chat-created="onChatCreated"
-          @on-click-history="onClickHistory"
-          @on-chat-deleted="onChatDeleted"
-          @on-chat-renamed="onChatRenamed"
-          @on-click-side-bar-btn="hideSideBar"
-        />
-      </el-drawer>
-
-      <el-tooltip effect="dark" :offset="8" :content="t('qa.new_chat')" placement="bottom">
-        <el-button link type="primary" class="icon-btn" @click="createNewChatSimple">
-          <el-icon>
-            <icon_new_chat_outlined />
-          </el-icon>
-        </el-button>
-      </el-tooltip>
-    </div>
-    <el-container :loading="loading">
-      <el-main
-        class="chat-record-list"
+      <div
+        v-if="(!isCompletePage && !pageEmbedded) || !chatListSideBarShow"
+        class="hidden-sidebar-btn"
         :class="{
-          'hide-sidebar': (isCompletePage || pageEmbedded) && !chatListSideBarShow,
-          'assistant-chat-main': !isCompletePage && !pageEmbedded,
+          'assistant-popover-sidebar': !isCompletePage && !pageEmbedded,
+          'embedded-history-hidden': embeddedHistoryHidden,
         }"
       >
-        <div v-if="computedMessages.length == 0 && !loading" class="welcome-content-block">
-          <div class="welcome-content">
-            <template v-if="isCompletePage">
-              <div class="greeting">
-                <img height="32" width="32" v-if="loginBg" :src="loginBg" alt="" />
-                <img v-else :src="defaultAvatarPng" height="32" width="32" alt="" />
-                {{ t('qa.greeting') }}
-              </div>
-              <div class="sub">
-                {{ t('qa.hint_description') }}
-              </div>
-            </template>
-
-            <div v-else class="assistant-desc">
-              <img
-                v-if="logoAssistant"
-                :src="logoAssistant"
-                class="logo"
-                width="30px"
-                height="30px"
-                alt=""
-              />
-              <img v-else :src="defaultAvatarPng" class="logo" width="30px" height="30px" alt="" />
-              <div class="i-am">{{ welcome }}</div>
-              <div class="i-can">{{ welcomeDesc }}</div>
-            </div>
-
-            <el-button
-              v-if="isCompletePage && currentChatId === undefined"
-              size="large"
-              type="primary"
-              class="greeting-btn"
-              @click="createNewChatSimple"
-            >
-              <span class="inner-icon">
-                <el-icon>
-                  <icon_new_chat_outlined />
-                </el-icon>
-              </span>
-              {{ t('qa.start_sqlbot') }}
-            </el-button>
-          </div>
-        </div>
-        <div v-else-if="computedMessages.length == 0 && loading" class="welcome-content-block">
-          <div style="display: flex; align-items: center; height: 30px">
-            <img
-              height="30"
-              width="30"
-              v-if="logoAssistant || loginBg"
-              :src="logoAssistant ? logoAssistant : loginBg"
-              alt=""
-            />
-            <img v-else :src="defaultAvatarPng" height="30" width="30" alt="" />
-            <span style="margin-left: 12px">{{ appearanceStore.name }}</span>
-          </div>
-        </div>
-        <el-scrollbar
-          v-if="computedMessages.length > 0"
-          ref="chatListRef"
-          class="no-horizontal"
-          @scroll="handleScroll"
+        <el-popover
+          :width="280"
+          placement="bottom-start"
+          popper-class="popover-chat_history"
+          :popper-style="{ ...defaultFloatPopoverStyle }"
         >
-          <div
-            ref="innerRef"
-            class="chat-scroll"
-            :class="{
-              'no-sidebar': isCompletePage && !chatListSideBarShow,
-              pad16: !isCompletePage,
-            }"
-          >
-            <template v-for="(message, _index) in computedMessages" :key="_index">
-              <ChatRow
-                :logoAssistant="logoAssistant"
-                :current-chat="currentChat"
-                :msg="message"
-                :hide-avatar="message.first_chat"
-              >
-                <RecommendQuestion
-                  v-if="message.role === 'assistant' && message.first_chat"
-                  ref="recommendQuestionRef"
-                  :current-chat="currentChat"
-                  :record-id="message.record?.id"
-                  :questions="message.recommended_question"
-                  :disabled="isTyping"
-                  :first-chat="message.first_chat"
-                  @click-question="quickAsk"
-                  @stop="onChatStop"
-                  @loading-over="loadingOver"
-                />
-                <UserChat v-if="message.role === 'user'" :message="message" />
-                <template v-if="message.role === 'assistant' && !message.first_chat">
-                  <ChartAnswer
-                    v-if="
-                      (message?.record?.analysis_record_id === undefined ||
-                        message?.record?.analysis_record_id === null) &&
-                      (message?.record?.predict_record_id === undefined ||
-                        message?.record?.predict_record_id === null)
-                    "
-                    ref="chartAnswerRef"
-                    :chat-list="chatList"
-                    :current-chat="currentChat"
-                    :current-chat-id="currentChatId"
-                    :loading="isTyping"
-                    :message="message"
-                    :reasoning-name="['sql_answer', 'chart_answer']"
-                    @scroll-bottom="scrollToBottom"
-                    @finish="onChartAnswerFinish"
-                    @error="onChartAnswerError"
-                    @stop="onChatStop"
-                    @prefetch-recommend="onPrefetchRecommend"
-                  >
-                    <ErrorInfo :error="message.record?.error" class="error-container" />
-                    <template #tool>
-                      <ChatToolBar v-if="!message.isTyping" :message="message">
-                        <div class="tool-btns">
-                          <el-tooltip
-                            effect="dark"
-                            :offset="8"
-                            :content="t('qa.ask_again')"
-                            placement="top"
-                          >
-                            <el-button
-                              class="tool-btn"
-                              text
-                              :disabled="isTyping"
-                              @click="askAgain(message)"
-                            >
-                              <el-icon size="18">
-                                <icon_replace_outlined />
-                              </el-icon>
-                            </el-button>
-                          </el-tooltip>
-                          <template v-if="message.record?.chart">
-                            <div class="divider"></div>
-                            <div>
-                              <el-button
-                                class="tool-btn"
-                                text
-                                :disabled="isTyping"
-                                @click="clickAnalysis(message.record?.id)"
-                              >
-                                <span class="tool-btn-inner">
-                                  <el-icon size="18">
-                                    <icon_screen_outlined />
-                                  </el-icon>
-                                  <span class="btn-text">
-                                    {{ t('chat.data_analysis') }}
-                                  </span>
-                                </span>
-                              </el-button>
-                            </div>
-                            <div>
-                              <el-button
-                                class="tool-btn"
-                                text
-                                :disabled="isTyping"
-                                @click="clickPredict(message.record?.id)"
-                              >
-                                <span class="tool-btn-inner">
-                                  <el-icon size="18">
-                                    <icon_start_outlined />
-                                  </el-icon>
-                                  <span class="btn-text">
-                                    {{ t('chat.data_predict') }}
-                                  </span>
-                                </span>
-                              </el-button>
-                            </div>
-                          </template>
-                        </div>
-                      </ChatToolBar>
-                    </template>
-                    <template #footer>
-                      <RecommendQuestion
-                        ref="recommendQuestionRef"
-                        :current-chat="currentChat"
-                        :record-id="message.record?.id"
-                        :questions="message.recommended_question"
-                        :first-chat="message.first_chat"
-                        :disabled="isTyping"
-                        @click-question="quickAsk"
-                        @loading-over="loadingOver"
-                        @stop="onChatStop"
-                      />
-                    </template>
-                  </ChartAnswer>
-                  <AnalysisAnswer
-                    v-if="
-                      message?.record?.analysis_record_id !== undefined &&
-                      message?.record?.analysis_record_id !== null
-                    "
-                    ref="analysisAnswerRef"
-                    :chat-list="chatList"
-                    :current-chat="currentChat"
-                    :current-chat-id="currentChatId"
-                    :loading="isTyping"
-                    :message="message"
-                    @finish="onAnalysisAnswerFinish"
-                    @error="onAnalysisAnswerError"
-                    @stop="onChatStop"
-                  >
-                    <ErrorInfo :error="message.record?.error" class="error-container" />
-                    <template #tool>
-                      <ChatToolBar v-if="!message.isTyping" :message="message" />
-                    </template>
-                  </AnalysisAnswer>
-                  <PredictAnswer
-                    v-if="
-                      message?.record?.predict_record_id !== undefined &&
-                      message?.record?.predict_record_id !== null
-                    "
-                    ref="predictAnswerRef"
-                    :chat-list="chatList"
-                    :current-chat="currentChat"
-                    :current-chat-id="currentChatId"
-                    :loading="isTyping"
-                    :message="message"
-                    @scroll-bottom="scrollToBottom"
-                    @finish="onPredictAnswerFinish"
-                    @error="onPredictAnswerError"
-                    @stop="onChatStop"
-                  >
-                    <ErrorInfo :error="message.record?.error" class="error-container" />
-                    <template #tool>
-                      <ChatToolBar v-if="!message.isTyping" :message="message" />
-                    </template>
-                  </PredictAnswer>
-                </template>
-              </ChatRow>
-            </template>
-          </div>
-        </el-scrollbar>
-      </el-main>
-      <el-footer v-if="computedMessages.length > 0 || !isCompletePage" class="chat-footer">
-        <div class="input-wrapper" @click="clickInput">
-          <div class="datasource-settings">
-            <div v-if="isCompletePage" class="datasource">
-              <div class="ds-info">
-                <template v-if="currentChat.datasource && currentChat.datasource_name">
-                  {{ t('qa.selected_datasource') }}:
-                  <img
-                    v-if="currentChatEngineType"
-                    style="margin-left: 4px; margin-right: 4px"
-                    :src="currentChatEngineType"
-                    width="16px"
-                    height="16px"
-                    alt=""
-                  />
-                  <span class="name">
-                    {{ currentChat.datasource_name }}
-                  </span>
-                </template>
-              </div>
-            </div>
-            <div class="chat-settings">
-              <el-tooltip content="开启后，AI将结合历史上下文理解您的问题" placement="top">
-                <div class="multi-turn-wrapper">
-                  <el-switch
-                    v-model="currentChat.enable_multi_turn"
-                    size="small"
-                    :disabled="isCompletePage && !currentChat.id"
-                    class="multi-turn-switch"
-                    @change="handleMultiTurnChange"
-                  />
-                  <span class="multi-turn-label">多轮对话</span>
-                </div>
-              </el-tooltip>
-            </div>
-          </div>
-          <el-input
-            ref="inputRef"
-            v-model="inputMessage"
-            :disabled="isTyping"
-            clearable
-            class="input-area"
-            :class="{ 'is-assistant': !isCompletePage && !currentChat.id }"
-            type="textarea"
-            :autosize="{ minRows: 1, maxRows: 8.583 }"
-            :placeholder="t('qa.question_placeholder')"
-            @keydown.enter.exact.prevent="($event: any) => sendMessage($event)"
-            @keydown.ctrl.enter.exact.prevent="handleCtrlEnter"
+          <template #reference>
+            <el-button link type="primary" class="icon-btn" @click="showSideBar">
+              <el-icon>
+                <icon_sidebar_outlined />
+              </el-icon>
+            </el-button>
+          </template>
+          <ChatListContainer
+            ref="floatPopoverRef"
+            v-model:chat-list="chatList"
+            v-model:current-chat-id="currentChatId"
+            v-model:current-chat="currentChat"
+            v-model:loading="loading"
+            :in-popover="!chatListSideBarShow"
+            :app-name="customName"
+            @go-empty="goEmpty"
+            @on-chat-created="onChatCreated"
+            @on-click-history="onClickHistory"
+            @on-chat-deleted="onChatDeleted"
+            @on-chat-renamed="onChatRenamed"
+            @on-click-side-bar-btn="hideSideBar"
           />
+        </el-popover>
 
-          <el-button
-            circle
-            type="primary"
-            class="input-icon"
-            :disabled="isTyping"
-            @click.stop="sendMessage"
-          >
-            <el-icon size="16">
-              <icon_send_filled />
+        <el-drawer
+          v-model="floatPopoverVisible"
+          :with-header="false"
+          :modal="false"
+          direction="ltr"
+          size="278"
+          modal-class="assistant-popover_sidebar"
+          :before-close="hideSideBar"
+        >
+          <ChatListContainer
+            ref="floatPopoverRef"
+            v-model:chat-list="chatList"
+            v-model:current-chat-id="currentChatId"
+            v-model:current-chat="currentChat"
+            v-model:loading="loading"
+            :app-name="customName"
+            :in-popover="false"
+            @go-empty="goEmpty"
+            @on-chat-created="onChatCreated"
+            @on-click-history="onClickHistory"
+            @on-chat-deleted="onChatDeleted"
+            @on-chat-renamed="onChatRenamed"
+            @on-click-side-bar-btn="hideSideBar"
+          />
+        </el-drawer>
+
+        <el-tooltip effect="dark" :offset="8" :content="t('qa.new_chat')" placement="bottom">
+          <el-button link type="primary" class="icon-btn" @click="createNewChatSimple">
+            <el-icon>
+              <icon_new_chat_outlined />
             </el-icon>
           </el-button>
-        </div>
-      </el-footer>
-    </el-container>
+        </el-tooltip>
+      </div>
+      <el-container :loading="loading">
+        <el-main
+          class="chat-record-list"
+          :class="{
+            'hide-sidebar': (isCompletePage || pageEmbedded) && !chatListSideBarShow,
+            'assistant-chat-main': !isCompletePage && !pageEmbedded,
+          }"
+        >
+          <div v-if="computedMessages.length == 0 && !loading" class="welcome-content-block">
+            <div class="welcome-content">
+              <template v-if="isCompletePage">
+                <div class="greeting">
+                  <img height="32" width="32" v-if="loginBg" :src="loginBg" alt="" />
+                  <img v-else :src="defaultAvatarPng" height="32" width="32" alt="" />
+                  {{ t('qa.greeting') }}
+                </div>
+                <div class="sub">
+                  {{ t('qa.hint_description') }}
+                </div>
+              </template>
 
-    <ChatCreator v-if="isCompletePage" ref="chatCreatorRef" @on-chat-created="onChatCreatedQuick" />
-    <ChatCreator ref="hiddenChatCreatorRef" hidden @on-chat-created="onChatCreatedQuick" />
-  </el-container>
+              <div v-else class="assistant-desc">
+                <img
+                  v-if="logoAssistant"
+                  :src="logoAssistant"
+                  class="logo"
+                  width="30px"
+                  height="30px"
+                  alt=""
+                />
+                <img
+                  v-else
+                  :src="defaultAvatarPng"
+                  class="logo"
+                  width="30px"
+                  height="30px"
+                  alt=""
+                />
+                <div class="i-am">{{ welcome }}</div>
+                <div class="i-can">{{ welcomeDesc }}</div>
+              </div>
+
+              <el-button
+                v-if="isCompletePage && currentChatId === undefined"
+                size="large"
+                type="primary"
+                class="greeting-btn"
+                @click="createNewChatSimple"
+              >
+                <span class="inner-icon">
+                  <el-icon>
+                    <icon_new_chat_outlined />
+                  </el-icon>
+                </span>
+                {{ t('qa.start_sqlbot') }}
+              </el-button>
+            </div>
+          </div>
+          <div v-else-if="computedMessages.length == 0 && loading" class="welcome-content-block">
+            <div style="display: flex; align-items: center; height: 30px">
+              <img
+                height="30"
+                width="30"
+                v-if="logoAssistant || loginBg"
+                :src="logoAssistant ? logoAssistant : loginBg"
+                alt=""
+              />
+              <img v-else :src="defaultAvatarPng" height="30" width="30" alt="" />
+              <span style="margin-left: 12px">{{ appearanceStore.name }}</span>
+            </div>
+          </div>
+          <el-scrollbar
+            v-if="computedMessages.length > 0"
+            ref="chatListRef"
+            class="no-horizontal"
+            @scroll="handleScroll"
+          >
+            <div
+              ref="innerRef"
+              class="chat-scroll"
+              :class="{
+                'no-sidebar': isCompletePage && !chatListSideBarShow,
+                pad16: !isCompletePage,
+              }"
+            >
+              <template v-for="(message, _index) in computedMessages" :key="_index">
+                <ChatRow
+                  :logoAssistant="logoAssistant"
+                  :current-chat="currentChat"
+                  :msg="message"
+                  :hide-avatar="message.first_chat"
+                >
+                  <RecommendQuestion
+                    v-if="message.role === 'assistant' && message.first_chat"
+                    ref="recommendQuestionRef"
+                    :current-chat="currentChat"
+                    :record-id="message.record?.id"
+                    :questions="message.recommended_question"
+                    :disabled="isTyping"
+                    :first-chat="message.first_chat"
+                    @click-question="quickAsk"
+                    @stop="onChatStop"
+                    @loading-over="loadingOver"
+                  />
+                  <UserChat v-if="message.role === 'user'" :message="message" />
+                  <template v-if="message.role === 'assistant' && !message.first_chat">
+                    <ChartAnswer
+                      v-if="
+                        (message?.record?.analysis_record_id === undefined ||
+                          message?.record?.analysis_record_id === null) &&
+                        (message?.record?.predict_record_id === undefined ||
+                          message?.record?.predict_record_id === null)
+                      "
+                      ref="chartAnswerRef"
+                      :chat-list="chatList"
+                      :current-chat="currentChat"
+                      :current-chat-id="currentChatId"
+                      :loading="isTyping"
+                      :message="message"
+                      :reasoning-name="['sql_answer', 'chart_answer']"
+                      @scroll-bottom="scrollToBottom"
+                      @finish="onChartAnswerFinish"
+                      @error="onChartAnswerError"
+                      @stop="onChatStop"
+                      @prefetch-recommend="onPrefetchRecommend"
+                    >
+                      <ErrorInfo :error="message.record?.error" class="error-container" />
+                      <template #tool>
+                        <ChatToolBar v-if="!message.isTyping" :message="message">
+                          <div class="tool-btns">
+                            <el-tooltip
+                              effect="dark"
+                              :offset="8"
+                              :content="t('qa.ask_again')"
+                              placement="top"
+                            >
+                              <el-button
+                                class="tool-btn"
+                                text
+                                :disabled="isTyping"
+                                @click="askAgain(message)"
+                              >
+                                <el-icon size="18">
+                                  <icon_replace_outlined />
+                                </el-icon>
+                              </el-button>
+                            </el-tooltip>
+                            <template v-if="message.record?.chart">
+                              <div class="divider"></div>
+                              <div>
+                                <el-button
+                                  class="tool-btn"
+                                  text
+                                  :disabled="isTyping"
+                                  @click="clickAnalysis(message.record?.id)"
+                                >
+                                  <span class="tool-btn-inner">
+                                    <el-icon size="18">
+                                      <icon_screen_outlined />
+                                    </el-icon>
+                                    <span class="btn-text">
+                                      {{ t('chat.data_analysis') }}
+                                    </span>
+                                  </span>
+                                </el-button>
+                              </div>
+                              <div>
+                                <el-button
+                                  class="tool-btn"
+                                  text
+                                  :disabled="isTyping"
+                                  @click="clickPredict(message.record?.id)"
+                                >
+                                  <span class="tool-btn-inner">
+                                    <el-icon size="18">
+                                      <icon_start_outlined />
+                                    </el-icon>
+                                    <span class="btn-text">
+                                      {{ t('chat.data_predict') }}
+                                    </span>
+                                  </span>
+                                </el-button>
+                              </div>
+                            </template>
+                          </div>
+                        </ChatToolBar>
+                      </template>
+                      <template #footer>
+                        <RecommendQuestion
+                          ref="recommendQuestionRef"
+                          :current-chat="currentChat"
+                          :record-id="message.record?.id"
+                          :questions="message.recommended_question"
+                          :first-chat="message.first_chat"
+                          :disabled="isTyping"
+                          @click-question="quickAsk"
+                          @loading-over="loadingOver"
+                          @stop="onChatStop"
+                        />
+                      </template>
+                    </ChartAnswer>
+                    <AnalysisAnswer
+                      v-if="
+                        message?.record?.analysis_record_id !== undefined &&
+                        message?.record?.analysis_record_id !== null
+                      "
+                      ref="analysisAnswerRef"
+                      :chat-list="chatList"
+                      :current-chat="currentChat"
+                      :current-chat-id="currentChatId"
+                      :loading="isTyping"
+                      :message="message"
+                      @finish="onAnalysisAnswerFinish"
+                      @error="onAnalysisAnswerError"
+                      @stop="onChatStop"
+                    >
+                      <ErrorInfo :error="message.record?.error" class="error-container" />
+                      <template #tool>
+                        <ChatToolBar v-if="!message.isTyping" :message="message" />
+                      </template>
+                    </AnalysisAnswer>
+                    <PredictAnswer
+                      v-if="
+                        message?.record?.predict_record_id !== undefined &&
+                        message?.record?.predict_record_id !== null
+                      "
+                      ref="predictAnswerRef"
+                      :chat-list="chatList"
+                      :current-chat="currentChat"
+                      :current-chat-id="currentChatId"
+                      :loading="isTyping"
+                      :message="message"
+                      @scroll-bottom="scrollToBottom"
+                      @finish="onPredictAnswerFinish"
+                      @error="onPredictAnswerError"
+                      @stop="onChatStop"
+                    >
+                      <ErrorInfo :error="message.record?.error" class="error-container" />
+                      <template #tool>
+                        <ChatToolBar v-if="!message.isTyping" :message="message" />
+                      </template>
+                    </PredictAnswer>
+                  </template>
+                </ChatRow>
+              </template>
+            </div>
+          </el-scrollbar>
+        </el-main>
+        <el-footer v-if="computedMessages.length > 0 || !isCompletePage" class="chat-footer">
+          <div class="input-wrapper" @click="clickInput">
+            <div class="datasource-settings">
+              <div v-if="isCompletePage" class="datasource">
+                <div class="ds-info">
+                  <template v-if="currentChat.datasource && currentChat.datasource_name">
+                    {{ t('qa.selected_datasource') }}:
+                    <img
+                      v-if="currentChatEngineType"
+                      style="margin-left: 4px; margin-right: 4px"
+                      :src="currentChatEngineType"
+                      width="16px"
+                      height="16px"
+                      alt=""
+                    />
+                    <span class="name">
+                      {{ currentChat.datasource_name }}
+                    </span>
+                  </template>
+                </div>
+              </div>
+              <div class="chat-settings">
+                <el-tooltip content="开启后，AI将结合历史上下文理解您的问题" placement="top">
+                  <div class="multi-turn-wrapper">
+                    <el-switch
+                      v-model="currentChat.enable_multi_turn"
+                      size="small"
+                      :disabled="isCompletePage && !currentChat.id"
+                      class="multi-turn-switch"
+                      @change="handleMultiTurnChange"
+                    />
+                    <span class="multi-turn-label">多轮对话</span>
+                  </div>
+                </el-tooltip>
+              </div>
+            </div>
+            <el-input
+              ref="inputRef"
+              v-model="inputMessage"
+              :disabled="isTyping"
+              clearable
+              class="input-area"
+              :class="{ 'is-assistant': !isCompletePage && !currentChat.id }"
+              type="textarea"
+              :autosize="{ minRows: 1, maxRows: 8.583 }"
+              :placeholder="t('qa.question_placeholder')"
+              @keydown.enter.exact.prevent="($event: any) => sendMessage($event)"
+              @keydown.ctrl.enter.exact.prevent="handleCtrlEnter"
+            />
+
+            <el-button
+              circle
+              type="primary"
+              class="input-icon"
+              :disabled="isTyping"
+              @click.stop="sendMessage"
+            >
+              <el-icon size="16">
+                <icon_send_filled />
+              </el-icon>
+            </el-button>
+          </div>
+        </el-footer>
+      </el-container>
+
+      <ChatCreator
+        v-if="isCompletePage"
+        ref="chatCreatorRef"
+        @on-chat-created="onChatCreatedQuick"
+      />
+      <ChatCreator ref="hiddenChatCreatorRef" hidden @on-chat-created="onChatCreatedQuick" />
+    </el-container>
   </div>
 </template>
 

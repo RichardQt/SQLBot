@@ -338,7 +338,13 @@ watch(
       </div>
       <div class="buttons-bar">
         <div class="chart-select-container">
-          <el-tooltip v-if="chartTypeList.length > 0" effect="dark" :offset="8" :content="t('chat.type')" placement="top">
+          <el-tooltip
+            v-if="chartTypeList.length > 0"
+            effect="dark"
+            :offset="8"
+            :content="t('chat.type')"
+            placement="top"
+          >
             <span>
               <ChartPopover
                 :chart-type-list="chartTypeList"
