@@ -1,4 +1,5 @@
 <template>
+  <div class="chat-page-wrapper">
   <el-popover
     v-if="assistantStore.assistant && !assistantStore.pageEmbedded && assistantStore.type != 4"
     :width="280"
@@ -435,6 +436,7 @@
     <ChatCreator v-if="isCompletePage" ref="chatCreatorRef" @on-chat-created="onChatCreatedQuick" />
     <ChatCreator ref="hiddenChatCreatorRef" hidden @on-chat-created="onChatCreatedQuick" />
   </el-container>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -1140,6 +1142,12 @@ const handleMultiTurnChange = async (val: boolean | string | number) => {
 </script>
 
 <style lang="less" scoped>
+.chat-page-wrapper {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
 .chat-container {
   height: 100%;
   position: relative;

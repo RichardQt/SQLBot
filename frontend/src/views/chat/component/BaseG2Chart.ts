@@ -52,29 +52,63 @@ export abstract class BaseG2Chart extends BaseChart {
   }
 
   /**
+   * 从事件数据中提取单条数据记录
+   * 处理 line/area 等 mark 返回数组的情况
+   */
+  private extractSingleRecord(rawData: any): Record<string, any> | null {
+    if (!rawData) return null
+    // 如果是数组（折线图点击线条时会返回整条线的数据数组）
+    if (Array.isArray(rawData)) {
+      return rawData.length > 0 ? rawData[0] : null
+    }
+    // 如果是包含 data 属性且是数组的对象
+    if (rawData.data && Array.isArray(rawData.data)) {
+      return rawData.data.length > 0 ? rawData.data[0] : null
+    }
+    return rawData
+  }
+
+  /**
    * 绑定图表点击事件，获取点击区域的 x/y 轴数据
+   * 仅响应数据点（point mark）的点击，忽略线条（line mark）的点击
    */
   private bindClickEvent() {
     // 监听图表元素点击事件
     this.chart.on('element:click', (event: any) => {
       const { data } = event
       if (data) {
+        const rawRecord = data.data || data
+
+        // 折线图点击线条时 rawRecord 为数组，此时忽略，只响应点击数据点
+        if (Array.isArray(rawRecord)) {
+          console.log('点击了线条（数组数据），忽略，仅响应数据点点击')
+          return
+        }
+
         // 获取 x 轴和 y 轴对应的字段
         const xAxisField = this.axis.find((item) => item.type === 'x')
         const yAxisField = this.axis.find((item) => item.type === 'y')
         const seriesField = this.axis.find((item) => item.type === 'series')
 
+        // rawRecord 已确认为单条记录（非数组），直接使用
+        const record = this.extractSingleRecord(rawRecord)
+
+        if (!record) {
+          console.warn('图表点击事件：无法提取有效数据记录')
+          return
+        }
+
         const clickedData: ChartClickEventData = {
           chartType: this._name,
           chartId: this.id,
-          // 原始数据
-          rawData: data.data || data,
+          // 原始数据（保证是单条记录）
+          rawData: record,
           // x 轴数据
           x: xAxisField
             ? {
                 field: xAxisField.value,
                 name: xAxisField.name,
-                value: (data.data || data)[xAxisField.value],
+                value: record[xAxisField.value],
               }
             : null,
           // y 轴数据
@@ -82,7 +116,7 @@ export abstract class BaseG2Chart extends BaseChart {
             ? {
                 field: yAxisField.value,
                 name: yAxisField.name,
-                value: (data.data || data)[yAxisField.value],
+                value: record[yAxisField.value],
               }
             : null,
           // 系列数据（如果有）
@@ -90,7 +124,7 @@ export abstract class BaseG2Chart extends BaseChart {
             ? {
                 field: seriesField.value,
                 name: seriesField.name,
-                value: (data.data || data)[seriesField.value],
+                value: record[seriesField.value],
               }
             : null,
         }
@@ -106,8 +140,12 @@ export abstract class BaseG2Chart extends BaseChart {
         console.log('原始数据:', clickedData.rawData)
         console.log('==================')
 
-        // 发射图表点击事件，用于触发文章详情弹窗
-        chartEventEmitter.emit('chart-click', clickedData)
+        // 仅在数据有效时发射事件
+        if (clickedData.x?.value !== undefined || clickedData.series?.value !== undefined) {
+          chartEventEmitter.emit('chart-click', clickedData)
+        } else {
+          console.warn('图表点击事件：数据字段值为 undefined，跳过事件发射')
+        }
       }
     })
   }

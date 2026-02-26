@@ -90,14 +90,18 @@ function handleChartClick(eventData: ChartClickEventData) {
   let fieldValue = ''
   let displayName = ''
 
-  // 优先检查 x 轴字段
-  if (eventData.x && SUPPORTED_FIELDS.includes(eventData.x.field)) {
+  // 优先检查 x 轴字段（确保 value 有效，排除 undefined/null）
+  if (eventData.x && eventData.x.value != null && SUPPORTED_FIELDS.includes(eventData.x.field)) {
     fieldName = eventData.x.field
     fieldValue = String(eventData.x.value)
     displayName = eventData.x.name
   }
   // 然后检查系列字段
-  else if (eventData.series && SUPPORTED_FIELDS.includes(eventData.series.field)) {
+  else if (
+    eventData.series &&
+    eventData.series.value != null &&
+    SUPPORTED_FIELDS.includes(eventData.series.field)
+  ) {
     fieldName = eventData.series.field
     fieldValue = String(eventData.series.value)
     displayName = eventData.series.name

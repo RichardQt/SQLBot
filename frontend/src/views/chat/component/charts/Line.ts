@@ -97,7 +97,20 @@ export class Line extends BaseG2Chart {
             fill: 'white',
           },
           encode: {
-            size: 1.5,
+            size: 3,
+          },
+          tooltip: false,
+        },
+        {
+          // 大面积透明交互点层，提升折线图点击命中率
+          type: 'point',
+          style: {
+            fill: 'transparent',
+            stroke: 'transparent',
+            cursor: 'pointer',
+          },
+          encode: {
+            size: 15,
           },
           tooltip: false,
         },

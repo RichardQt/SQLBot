@@ -114,7 +114,9 @@ def build_query_sql(table_name: str, field_name: str, field_value: str, offset: 
                 r.thumbs_count AS likes
             FROM fx_education_articles_legal l
             JOIN fx_education_articles e ON l.article_id = e.article_id
+            
             JOIN fx_article_records r ON e.article_id = r.article_id
+
             WHERE e.type_class = '1'
               AND l.{field_name} = '{field_value}'
             ORDER BY r.publish_time DESC

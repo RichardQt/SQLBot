@@ -54,10 +54,12 @@ const MenuItem = defineComponent({
     const route = useRoute()
     const titleWithIcon = (props: any) => {
       const { title, icon } = props
-      return [
-        h(ElIcon, { size: '18' }, { default: () => h(iconMap[icon]) }),
-        h('span', null, { default: () => title }),
-      ]
+      const nodes: any[] = []
+      if (iconMap[icon]) {
+        nodes.push(h(ElIcon, { size: '18' }, { default: () => h(iconMap[icon]) }))
+      }
+      nodes.push(h('span', null, { default: () => title }))
+      return nodes
     }
 
     const handleMenuClick = (e: any) => {
@@ -93,21 +95,24 @@ const MenuItem = defineComponent({
 
       const { title, iconDeActive, iconActive } = props.menu?.meta || {}
       const icon = route.path === path ? iconActive : iconDeActive
-      const iconCom: any = iconMap[icon] ? ElIcon : null
+      const defaultSlot: any[] = []
+      if (iconMap[icon]) {
+        defaultSlot.push(
+          h(
+            ElIcon,
+            { size: 18 },
+            {
+              default: () => h(iconMap[icon]),
+            }
+          )
+        )
+      }
+      defaultSlot.push(h('span', null, { default: () => title }))
       return h(
         ElMenuItem,
         { index: path, onClick: (e: any) => handleMenuClick(e) },
         {
-          default: () => [
-            h(
-              iconCom,
-              { size: 18 },
-              {
-                default: () => h(iconMap[icon]),
-              }
-            ),
-            h('span', null, { default: () => title }),
-          ],
+          default: () => defaultSlot,
         }
       )
     }

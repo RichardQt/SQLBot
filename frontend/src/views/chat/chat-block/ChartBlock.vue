@@ -99,7 +99,7 @@ const data = computed(() => {
     }
     return _list
   } else {
-    return dataObject.value.data
+    return dataObject.value.data ?? []
   }
 })
 
@@ -338,14 +338,15 @@ watch(
       </div>
       <div class="buttons-bar">
         <div class="chart-select-container">
-          <el-tooltip effect="dark" :offset="8" :content="t('chat.type')" placement="top">
-            <ChartPopover
-              v-if="chartTypeList.length > 0"
-              :chart-type-list="chartTypeList"
-              :chart-type="chartType"
-              :title="t('chat.type')"
-              @type-change="onTypeChange"
-            ></ChartPopover>
+          <el-tooltip v-if="chartTypeList.length > 0" effect="dark" :offset="8" :content="t('chat.type')" placement="top">
+            <span>
+              <ChartPopover
+                :chart-type-list="chartTypeList"
+                :chart-type="chartType"
+                :title="t('chat.type')"
+                @type-change="onTypeChange"
+              ></ChartPopover>
+            </span>
           </el-tooltip>
 
           <el-tooltip
