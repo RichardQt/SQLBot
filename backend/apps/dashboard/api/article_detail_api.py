@@ -46,6 +46,33 @@ class ArticleQueryResponse(BaseModel):
     page_size: int = 10
 
 
+# 字段名别名映射：将前端各种字段名统一映射到标准字段名
+FIELD_ALIAS_MAPPING = {
+    # 行业系统相关别名
+    'industry_system_name': 'industry_system',
+    'industrySystem': 'industry_system',
+    'industry': 'industry_system',
+    # 单位名称相关别名
+    'unitName': 'unit_name',
+    'name': 'unit_name',
+    # 单位属性相关别名
+    'unitProperty': 'unit_property',
+    'property': 'unit_property',
+    # 区域相关别名
+    'district': 'unit_district',
+    'area': 'unit_district',
+    'region': 'unit_district',
+    # 法律法规相关别名
+    'legalContentType': 'legal_content_type',
+    'legal_type': 'legal_content_type',
+    # 受众群体相关别名
+    'targetGroup': 'target_group',
+    'group': 'target_group',
+    # 主题日相关别名
+    'themeName': 'theme_name',
+    'topic': 'theme_name',
+}
+
 # 字段到表的映射关系
 FIELD_TABLE_MAPPING = {
     # 单位名称和单位属性 -> fx_education_articles
@@ -69,9 +96,20 @@ FIELD_TABLE_MAPPING = {
 }
 
 
+def normalize_field_name(field_name: str) -> str:
+    """将前端字段名规范化为标准字段名"""
+    # 先查别名映射
+    if field_name in FIELD_ALIAS_MAPPING:
+        return FIELD_ALIAS_MAPPING[field_name]
+    # 如果没有别名，返回原字段名
+    return field_name
+
+
 def get_table_by_field(field_name: str) -> Optional[str]:
     """根据字段名获取对应的表名"""
-    return FIELD_TABLE_MAPPING.get(field_name)
+    # 先规范化字段名
+    normalized_field = normalize_field_name(field_name)
+    return FIELD_TABLE_MAPPING.get(normalized_field)
 
 
 def build_query_sql(table_name: str, field_name: str, field_value: str, offset: int, limit: int) -> str:
@@ -79,6 +117,8 @@ def build_query_sql(table_name: str, field_name: str, field_value: str, offset: 
     根据表名和字段构建查询 SQL
     返回文章详情：article_title, publish_time, view_count, article_url, likes
     """
+    # 先规范化字段名
+    field_name = normalize_field_name(field_name)
     # 特殊处理主题日字段
     if field_name == 'theme_name':
         field_name = 'Legal_topics'
@@ -147,6 +187,8 @@ def build_query_sql(table_name: str, field_name: str, field_value: str, offset: 
 
 def build_count_sql(table_name: str, field_name: str, field_value: str) -> str:
     """构建计数 SQL"""
+    # 先规范化字段名
+    field_name = normalize_field_name(field_name)
     # 特殊处理主题日字段
     if field_name == 'theme_name':
         field_name = 'Legal_topics'

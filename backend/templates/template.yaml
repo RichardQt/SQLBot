@@ -123,10 +123,24 @@ template:
         </rule>
         <rule>
           主题日查询规则:
-          - 当用户提问涉及"主题日"时，查询 fx_theme_report 表必须添加筛选条件 `status = 1 AND generate = 1`
+          - 当用户提问涉及"主题日"时，查询 fx_theme 表必须添加筛选条件 `status = 1 `
           - status=1 表示该主题日记录为"使用中"状态（0为废弃）
-          - generate=1 表示该主题日报告"已生成"（0为未生成）
           - 此条件确保只返回有效且已生成报告的主题日数据
+        </rule>
+        <rule>
+          SQL字段别名标准化规则（用于图表点击交互）:
+          生成SQL时，以下关键字段必须使用固定的标准别名，不得使用其他变体名称：
+          - industry_system（行业系统）：别名必须为 industry_system，禁止使用 industry_system_name、industrySystem 等
+          - unit_name（单位名称）：别名必须为 unit_name，禁止使用 unitName、name 等
+          - unit_property（单位属性）：别名必须为 unit_property
+          - unit_district（单位区域）：别名必须为 unit_district 或 district_name
+          - legal_content_type（法律法规）：别名必须为 legal_content_type
+          - target_group（受众群体）：别名必须为 target_group
+          - theme_name 或 Legal_topics（主题日）：别名必须为 theme_name 或 Legal_topics
+          - month（月份）：别名必须为 month
+          示例：
+          - 正确：SELECT e.industry_system AS industry_system, COUNT(*) AS count FROM ...
+          - 错误：SELECT e.industry_system AS industry_system_name, COUNT(*) AS count FROM ...
         </rule>
 
       {basic_sql_examples}

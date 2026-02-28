@@ -59,7 +59,30 @@ const articleFieldName = ref('')
 const articleFieldValue = ref('')
 const articleDialogTitle = ref('')
 
-// 支持的字段映射（用于判断是否显示文章详情弹窗）
+// 字段别名映射：将各种前端字段名映射到标准字段名
+const FIELD_ALIAS_MAP: Record<string, string> = {
+  // 行业系统相关
+  industry_system_name: 'industry_system',
+  industrySystem: 'industry_system',
+  // 单位名称相关
+  unitName: 'unit_name',
+  // 单位属性相关
+  unitProperty: 'unit_property',
+  // 区域相关
+  district: 'unit_district',
+  area: 'unit_district',
+  region: 'unit_district',
+  // 法律法规相关
+  legalContentType: 'legal_content_type',
+  legal_type: 'legal_content_type',
+  // 受众群体相关
+  targetGroup: 'target_group',
+  // 主题日相关
+  themeName: 'theme_name',
+  topic: 'theme_name',
+}
+
+// 支持的标准字段列表
 const SUPPORTED_FIELDS = [
   'unit_name', // 单位名称
   'unit_property', // 单位属性
@@ -72,6 +95,21 @@ const SUPPORTED_FIELDS = [
   'theme_name', // 主题日
   'Legal_topics', // 法律主题
 ]
+
+/**
+ * 规范化字段名：将别名转换为标准字段名
+ */
+function normalizeFieldName(fieldName: string): string {
+  return FIELD_ALIAS_MAP[fieldName] || fieldName
+}
+
+/**
+ * 检查字段是否受支持（包括别名）
+ */
+function isFieldSupported(fieldName: string): boolean {
+  const normalized = normalizeFieldName(fieldName)
+  return SUPPORTED_FIELDS.includes(normalized)
+}
 
 /**
  * 处理图表点击事件
@@ -91,8 +129,8 @@ function handleChartClick(eventData: ChartClickEventData) {
   let displayName = ''
 
   // 优先检查 x 轴字段（确保 value 有效，排除 undefined/null）
-  if (eventData.x && eventData.x.value != null && SUPPORTED_FIELDS.includes(eventData.x.field)) {
-    fieldName = eventData.x.field
+  if (eventData.x && eventData.x.value != null && isFieldSupported(eventData.x.field)) {
+    fieldName = normalizeFieldName(eventData.x.field)
     fieldValue = String(eventData.x.value)
     displayName = eventData.x.name
   }
@@ -100,9 +138,9 @@ function handleChartClick(eventData: ChartClickEventData) {
   else if (
     eventData.series &&
     eventData.series.value != null &&
-    SUPPORTED_FIELDS.includes(eventData.series.field)
+    isFieldSupported(eventData.series.field)
   ) {
-    fieldName = eventData.series.field
+    fieldName = normalizeFieldName(eventData.series.field)
     fieldValue = String(eventData.series.value)
     displayName = eventData.series.name
   }
@@ -117,11 +155,12 @@ function handleChartClick(eventData: ChartClickEventData) {
     ) {
       dataToCheck = eventData.rawData[0]
     }
-    for (const field of SUPPORTED_FIELDS) {
-      if (field in dataToCheck && dataToCheck[field]) {
-        fieldName = field
-        fieldValue = String(dataToCheck[field])
-        displayName = field
+    // 遍历 rawData 中的所有字段，检查是否有支持的字段（包括别名）
+    for (const rawField of Object.keys(dataToCheck)) {
+      if (dataToCheck[rawField] && isFieldSupported(rawField)) {
+        fieldName = normalizeFieldName(rawField)
+        fieldValue = String(dataToCheck[rawField])
+        displayName = rawField
         break
       }
     }

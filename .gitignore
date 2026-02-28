@@ -10,7 +10,7 @@ components.d.ts
 .github
 #pg数据
 data/
-
+logs
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -204,3 +204,5 @@ backend/logs/*
 backend/logs/debug.log.1
 backend/logs/debug.log.5
 backend/logs/info.log.1
+backend/logs/debug.log.1
+backend/logs/debug.log.5
