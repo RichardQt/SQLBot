@@ -8,6 +8,12 @@ export interface ArticleQueryRequest {
   field_name: string
   /** 点击数据的字段值 */
   field_value: string
+  /**
+   * 生成图表所用的原始 SQL 语句（可选）。
+   * 当 field_name=unit_name 时，后端会自动从 WHERE 子句中提取
+   * theme_name / Legal_topics 的过滤值作为主题日关键词。
+   */
+  original_sql?: string
   /** 数据源 ID（可选） */
   datasource_id?: number
   /** 分页参数 */

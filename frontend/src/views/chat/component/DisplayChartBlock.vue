@@ -177,6 +177,11 @@ function handleChartClick(eventData: ChartClickEventData) {
   }
 }
 
+// 当前消息对应的原始 SQL（用于下钻时提取主题日等条件）
+const originalSql = computed<string>(() => {
+  return (props.message?.record as any)?.sql ?? ''
+})
+
 // 注册事件监听
 onMounted(() => {
   chartEventEmitter.on('chart-click', handleChartClick as any)
@@ -237,6 +242,7 @@ defineExpose({
       :field-name="articleFieldName"
       :field-value="articleFieldValue"
       :title="articleDialogTitle"
+      :original-sql="originalSql"
     />
   </div>
 </template>

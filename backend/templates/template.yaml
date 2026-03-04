@@ -123,9 +123,31 @@ template:
         </rule>
         <rule>
           主题日查询规则:
-          - 当用户提问涉及"主题日"时，查询 fx_theme 表必须添加筛选条件 `status = 1 `
+          - 当用户提问涉及"主题日"时，查询 fx_theme 表必须添加筛选条件 `status = 1`
           - status=1 表示该主题日记录为"使用中"状态（0为废弃）
           - 此条件确保只返回有效且已生成报告的主题日数据
+          - 【强制】当统计"各主题日文章数量/发布数量"时，文章的发布时间（publish_time）必须限定在该主题日的活动时间范围内，
+            即必须同时满足：`a.publish_time >= t.start_date AND a.publish_time < DATE_ADD(t.end_date, INTERVAL 1 DAY)`
+          - 【禁止】统计主题日文章数量时，禁止仅用 YEAR(publish_time) 或年份条件代替上述时间范围过滤，
+            即使用户问的是"某年主题日文章数量"，也必须以 start_date/end_date 为准而非年份
+          - 如果用户同时指定了年份（如"2025年"），可额外加 `YEAR(t.start_date) = 2025` 来过滤是2025年的主题日，
+            但文章发布时间依然用 `publish_time >= t.start_date AND publish_time < DATE_ADD(t.end_date, INTERVAL 1 DAY)` 过滤
+          - 【强制】统计文章数量时必须使用 COUNT(DISTINCT a.article_id) 而非 COUNT(a.article_id)，
+            避免同一文章通过多条 JOIN 路径（如 fx_theme 有多条同名记录、或 fx_education_articles_legal 有重复记录）被重复计数
+          - 标准主题日文章数量查询模板：
+            SELECT t.theme_name AS theme_name,
+                   COUNT(DISTINCT a.article_id) AS article_count
+            FROM fx_theme t
+            JOIN fx_education_articles_legal l ON t.theme_name = l.Legal_topics
+            JOIN fx_education_articles e ON l.article_id = e.article_id
+            JOIN fx_article_records a ON e.article_id = a.article_id
+            WHERE t.status = 1
+              AND e.type_class = '1'
+              AND a.publish_time >= t.start_date
+              AND a.publish_time < DATE_ADD(t.end_date, INTERVAL 1 DAY)
+            GROUP BY t.theme_name
+            ORDER BY article_count DESC
+            LIMIT 1000
         </rule>
         <rule>
           SQL字段别名标准化规则（用于图表点击交互）:

@@ -8,6 +8,8 @@ const props = defineProps<{
   fieldName: string
   fieldValue: string
   title?: string
+  /** 生成图表的原始 SQL，后端从中提取主题日等 WHERE 条件 */
+  originalSql?: string
 }>()
 
 const emit = defineEmits<{
@@ -43,6 +45,7 @@ async function fetchArticles() {
     const params: ArticleQueryRequest = {
       field_name: props.fieldName,
       field_value: props.fieldValue,
+      original_sql: props.originalSql || undefined,
       page: currentPage.value,
       page_size: pageSize.value,
     }
