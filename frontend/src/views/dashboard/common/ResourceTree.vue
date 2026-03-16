@@ -16,7 +16,6 @@ import { ElIcon, ElScrollbar } from 'element-plus-secondary'
 import { Icon } from '@/components/icon-custom'
 import { type SQTreeNode } from '@/views/dashboard/utils/treeNode'
 import _ from 'lodash'
-import router from '@/router'
 import { dashboardStoreWithOut } from '@/stores/dashboard/dashboard.ts'
 import ResourceGroupOpt from '@/views/dashboard/common/ResourceGroupOpt.vue'
 import { dashboardApi } from '@/api/dashboard.ts'
@@ -24,9 +23,11 @@ import HandleMore from '@/views/dashboard/common/HandleMore.vue'
 import { useI18n } from 'vue-i18n'
 import treeSort from '@/views/dashboard/utils/treeSortUtils.ts'
 import { useCache } from '@/utils/useCache.ts'
+import { useRoute } from 'vue-router'
 const { wsCache } = useCache()
 
 const { t } = useI18n()
+const route = useRoute()
 const dashboardStore = dashboardStoreWithOut()
 const resourceGroupOptRef = ref(null)
 
@@ -86,7 +87,7 @@ const state = reactive({
 
 const { handleDrop, handleDragStart } = treeDraggableChart(state, 'resourceTree', 'dashboard')
 
-const routerDashboardId = router.currentRoute.value.query.dashboardId
+const routerDashboardId = route.query.dashboardId
 if (routerDashboardId) {
   selectedNodeKey.value = routerDashboardId
   returnMounted.value = true

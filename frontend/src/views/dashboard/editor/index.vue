@@ -7,11 +7,12 @@ import { guid } from '@/utils/canvas.ts'
 import cloneDeep from 'lodash/cloneDeep'
 import { storeToRefs } from 'pinia'
 import { dashboardStoreWithOut } from '@/stores/dashboard/dashboard.ts'
-import router from '@/router'
 import { initCanvasData } from '@/views/dashboard/utils/canvasUtils.ts'
 import { useI18n } from 'vue-i18n'
+import { useRoute } from 'vue-router'
 
 const { t } = useI18n()
+const route = useRoute()
 const dashboardStore = dashboardStoreWithOut()
 const { componentData, canvasViewInfo, fullscreenFlag, baseMatrixCount } =
   storeToRefs(dashboardStore)
@@ -76,11 +77,11 @@ const maxYComponentCount = () => {
 
 onMounted(() => {
   // @ts-expect-error eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  state.opt = router.currentRoute.value.query.opt
+  state.opt = route.query.opt
   // @ts-expect-error eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  state.resourceId = router.currentRoute.value.query.resourceId
+  state.resourceId = route.query.resourceId
   // @ts-expect-error eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  state.routerPid = router.currentRoute.value.query.pid
+  state.routerPid = route.query.pid
   if (state.opt === 'create') {
     dashboardStore.updateDashboardInfo({
       dataState: 'prepare',

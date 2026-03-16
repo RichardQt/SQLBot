@@ -452,6 +452,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { Chat, chatApi, ChatInfo, type ChatMessage, ChatRecord } from '@/api/chat'
 import ChatRow from './ChatRow.vue'
 import ChartAnswer from './answer/ChartAnswer.vue'
@@ -480,8 +481,8 @@ import { useUserStore } from '@/stores/user'
 import { debounce } from 'lodash-es'
 import { ElMessage } from 'element-plus'
 
-import router from '@/router'
 const userStore = useUserStore()
+const router = useRouter()
 const props = defineProps<{
   startChatDsId?: number
   welcomeDesc?: string

@@ -237,7 +237,10 @@ const handleCurrentChange = (val: number) => {
         </el-button>
       </div>
     </div>
-    <div class="table-content" :class="multipleSelectionAll.length && 'show-pagination_height'">
+    <div
+      class="table-content"
+      :class="multipleSelectionAll.length > 0 && 'show-pagination_height'"
+    >
       <div class="preview-or-schema">
         <el-table
           ref="multipleTableRef"

@@ -2,8 +2,9 @@
 import SQPreview from '@/views/dashboard/preview/SQPreview.vue'
 import { load_resource_prepare } from '@/views/dashboard/utils/canvasUtils.ts'
 import { onMounted, reactive, ref } from 'vue'
-import router from '@/router'
+import { useRoute } from 'vue-router'
 
+const route = useRoute()
 const previewCanvasContainer = ref(null)
 const dashboardPreview = ref(null)
 const dataInitState = ref(true)
@@ -18,7 +19,7 @@ const state = reactive({
 
 onMounted(() => {
   // @ts-expect-error eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  state.resourceId = router.currentRoute.value.query.resourceId
+  state.resourceId = route.query.resourceId
   if (state.resourceId) {
     loadCanvasData({ id: state.resourceId })
   }

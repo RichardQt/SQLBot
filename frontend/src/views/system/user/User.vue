@@ -40,8 +40,8 @@
     <div
       class="sqlbot-table_user"
       :class="[
-        state.filterTexts.length && 'is-filter',
-        multipleSelectionAll.length && 'show-pagination_height',
+        state.filterTexts.length > 0 && 'is-filter',
+        multipleSelectionAll.length > 0 && 'show-pagination_height',
       ]"
     >
       <filter-text

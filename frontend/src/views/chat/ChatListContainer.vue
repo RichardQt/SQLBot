@@ -10,8 +10,9 @@ import { useAssistantStore } from '@/stores/assistant'
 import icon_sidebar_outlined from '@/assets/svg/icon_sidebar_outlined.svg'
 import icon_new_chat_outlined from '@/assets/svg/icon_new_chat_outlined.svg'
 import { useUserStore } from '@/stores/user'
-import router from '@/router'
+import { useRouter } from 'vue-router'
 const userStore = useUserStore()
+const router = useRouter()
 const props = withDefaults(
   defineProps<{
     inPopover?: boolean

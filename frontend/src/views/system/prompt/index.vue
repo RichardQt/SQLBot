@@ -399,7 +399,7 @@ const typeChange = (val: any) => {
     <div
       v-if="!searchLoading"
       class="table-content"
-      :class="multipleSelectionAll?.length && 'show-pagination_height'"
+      :class="multipleSelectionAll?.length > 0 && 'show-pagination_height'"
     >
       <div class="preview-or-schema">
         <el-table

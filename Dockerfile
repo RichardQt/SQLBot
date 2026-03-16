@@ -13,9 +13,8 @@ RUN mkdir -p ${APP_HOME} ${UI_HOME}
 COPY frontend /tmp/frontend
 RUN cd /tmp/frontend \
     && npm config set registry https://registry.npmmirror.com \
-    && rm -rf node_modules package-lock.json \
     && npm cache clean --force \
-    && npm install --legacy-peer-deps --no-audit --no-fund \
+    && npm ci --legacy-peer-deps --no-audit --no-fund \
     && npm run build \
     && mv dist ${UI_HOME}/dist
 

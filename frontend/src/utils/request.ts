@@ -10,13 +10,23 @@ import axios, {
 
 import { useCache } from '@/utils/useCache'
 import { getLocale } from './utils'
-import { useAssistantStore } from '@/stores/assistant'
-import { useRouter } from 'vue-router'
 // import { i18n } from '@/i18n'
 // const t = i18n.global.t
-const assistantStore = useAssistantStore()
 const { wsCache } = useCache()
-const router = useRouter()
+
+interface AssistantStoreLike {
+  getToken: string
+  getType: number
+  getCertificate: string
+  getOnline: boolean
+  getAssistant: boolean
+  refreshCertificate: () => Promise<unknown>
+}
+
+const getAssistantStore = async (): Promise<AssistantStoreLike> => {
+  const { useAssistantStore } = await import('@/stores/assistant')
+  return useAssistantStore() as AssistantStoreLike
+}
 // Response data structure
 export interface ApiResponse<T = unknown> {
   code: number
@@ -76,6 +86,7 @@ class HttpService {
     // Request interceptor
     this.instance.interceptors.request.use(
       async (config: InternalAxiosRequestConfig) => {
+        const assistantStore = await getAssistantStore()
         // Add auth token
         const token = wsCache.get('user.token')
         if (token && config.headers) {
@@ -177,7 +188,7 @@ class HttpService {
 
         // Unified error handling
         if (!requestOptions.customError && !requestOptions.silent) {
-          this.handleError(error)
+          await this.handleError(error)
         }
 
         return Promise.reject(error)
@@ -185,7 +196,8 @@ class HttpService {
     )
   }
 
-  private handleError(error: AxiosError) {
+  private async handleError(error: AxiosError) {
+    const assistantStore = await getAssistantStore()
     let errorMessage = 'Request error'
 
     if (error.response) {
@@ -200,11 +212,7 @@ class HttpService {
           // Redirect to login page if needed
           if (assistantStore.getAssistant) {
             wsCache.delete('user.token')
-            if (router?.push) {
-              router.push(`/401?title=${encodeURIComponent(errorMessage)}`)
-            } else {
-              window.location.href = `/#/401?title=${encodeURIComponent(errorMessage)}`
-            }
+            window.location.href = `/#/401?title=${encodeURIComponent(errorMessage)}`
             return
           }
           ElMessage({
@@ -281,6 +289,7 @@ class HttpService {
   }
 
   public async fetchStream(url: string, data?: any, controller?: AbortController): Promise<any> {
+    const assistantStore = await getAssistantStore()
     const token = wsCache.get('user.token')
     const heads: any = {
       'Content-Type': 'application/json',
