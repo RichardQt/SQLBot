@@ -41,6 +41,8 @@ class ArticleInfo(BaseModel):
     view_count: Optional[int] = None
     article_url: Optional[str] = None
     likes: Optional[int] = None
+    unit_name: Optional[str] = None
+    unit_property: Optional[str] = None
 
 
 class ArticleQueryResponse(BaseModel):
@@ -109,7 +111,7 @@ _DRILL_BASE_ALIASES = {'r', 'e'}
 # 额外表的标准 JOIN 语句（按依赖顺序定义，t 依赖 l）
 _EXTRA_JOIN_MAP = {
     'l': 'JOIN fx_education_articles_legal l ON l.article_id = e.article_id',
-    't': 'JOIN fx_theme t ON t.theme_name = l.Legal_topics',
+    't': "JOIN fx_theme t ON l.Legal_topics LIKE CONCAT('%', t.theme_name, '%')",
     'g': 'JOIN fx_education_articles_group g ON g.article_id = e.article_id',
 }
 
@@ -274,7 +276,9 @@ def build_query_sql(table_name: str, field_name: str, field_value: str, offset: 
                 r.publish_time,
                 r.view_count,
                 r.article_url,
-                r.thumbs_count AS likes
+                r.thumbs_count AS likes,
+                e.unit_name,
+                e.unit_property
             FROM fx_theme t
             JOIN fx_education_articles_legal l ON l.Legal_topics LIKE CONCAT('%', t.theme_name, '%')
             JOIN fx_education_articles e ON l.article_id = e.article_id
@@ -303,7 +307,9 @@ def build_query_sql(table_name: str, field_name: str, field_value: str, offset: 
                 r.publish_time,
                 r.view_count, 
                 r.article_url,
-                r.thumbs_count AS likes
+                r.thumbs_count AS likes,
+                e.unit_name,
+                e.unit_property
             FROM fx_education_articles e
             JOIN fx_article_records r ON e.article_id = r.article_id{join_fragment}
             WHERE e.type_class = '1'
@@ -322,7 +328,9 @@ def build_query_sql(table_name: str, field_name: str, field_value: str, offset: 
                 r.publish_time,
                 r.view_count,
                 r.article_url,
-                r.thumbs_count AS likes
+                r.thumbs_count AS likes,
+                e.unit_name,
+                e.unit_property
             FROM fx_education_articles_legal l
             JOIN fx_education_articles e ON l.article_id = e.article_id
             JOIN fx_article_records r ON e.article_id = r.article_id{_join_frag}
@@ -342,7 +350,9 @@ def build_query_sql(table_name: str, field_name: str, field_value: str, offset: 
                 r.publish_time,
                 r.view_count,
                 r.article_url,
-                r.thumbs_count AS likes
+                r.thumbs_count AS likes,
+                e.unit_name,
+                e.unit_property
             FROM fx_education_articles_group g
             JOIN fx_education_articles e ON g.article_id = e.article_id
             JOIN fx_article_records r ON e.article_id = r.article_id{_join_frag}
@@ -531,7 +541,9 @@ async def query_article_detail(
                     publish_time=str(row.get('publish_time')) if row.get('publish_time') else None,
                     view_count=int(row.get('view_count')) if row.get('view_count') else 0,
                     article_url=row.get('article_url'),
-                    likes=int(row.get('likes')) if row.get('likes') else 0
+                    likes=int(row.get('likes')) if row.get('likes') else 0,
+                    unit_name=row.get('unit_name'),
+                    unit_property=row.get('unit_property'),
                 )
                 articles.append(article)
         

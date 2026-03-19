@@ -30,6 +30,8 @@ export interface ArticleInfo {
   view_count: number
   article_url: string | null
   likes: number
+  unit_name: string | null
+  unit_property: string | null
 }
 
 /**

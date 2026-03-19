@@ -137,7 +137,7 @@ watch(
         <el-table-column
           prop="article_title"
           label="文章标题"
-          min-width="280"
+          min-width="240"
           show-overflow-tooltip
         >
           <template #default="{ row }">
@@ -149,6 +149,21 @@ watch(
               {{ row.article_title || '-' }}
             </span>
             <span v-else>{{ row.article_title || '-' }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="unit_name" label="单位名称" min-width="140" show-overflow-tooltip>
+          <template #default="{ row }">
+            {{ row.unit_name || '-' }}
+          </template>
+        </el-table-column>
+        <el-table-column
+          prop="unit_property"
+          label="单位属性"
+          min-width="120"
+          show-overflow-tooltip
+        >
+          <template #default="{ row }">
+            {{ row.unit_property || '-' }}
           </template>
         </el-table-column>
         <el-table-column prop="publish_time" label="发布时间" width="160">
@@ -214,10 +229,11 @@ watch(
 }
 
 .article-link {
-  color: var(--el-color-primary);
+  color: #66b1ff;
   cursor: pointer;
   &:hover {
     text-decoration: underline;
+    color: #409eff;
   }
 }
 
