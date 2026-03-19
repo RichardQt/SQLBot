@@ -966,6 +966,26 @@ class LLMService:
     def save_error(self, session: Session, message: str):
         return save_error_message(session=session, record_id=self.record.id, message=message)
 
+    def reset_session_state(self, session: Optional[Session]):
+        if not session:
+            return
+        try:
+            session.rollback()
+        except Exception:
+            pass
+
+    def safe_save_error(self, session: Optional[Session], message: str):
+        record = getattr(self, 'record', None)
+        if not session or not getattr(record, 'id', None):
+            return None
+        self.reset_session_state(session)
+        try:
+            return self.save_error(session=session, message=message)
+        except Exception as exc:
+            SQLBotLogUtil.error(f"failed to persist chat error message: {exc}")
+            self.reset_session_state(session)
+            return None
+
     def save_sql_data(self, session: Session, data_obj: Dict[str, Any]):
         try:
             data_result = data_obj.get('data')
@@ -984,6 +1004,18 @@ class LLMService:
 
     def finish(self, session: Session):
         return finish_record(session=session, record_id=self.record.id)
+
+    def safe_finish(self, session: Optional[Session]):
+        record = getattr(self, 'record', None)
+        if not session or not getattr(record, 'id', None):
+            return None
+        self.reset_session_state(session)
+        try:
+            return self.finish(session)
+        except Exception as exc:
+            SQLBotLogUtil.error(f"failed to finish chat record: {exc}")
+            self.reset_session_state(session)
+            return None
 
     def execute_sql(self, sql: str):
         """Execute SQL query
@@ -1518,10 +1550,12 @@ class LLMService:
             if in_chat:
                 # Return log IDs for feedback feature
                 finish_data = {'type': 'finish'}
-                if OperationEnum.GENERATE_SQL in self.current_logs:
-                    finish_data['sql_log_id'] = self.current_logs[OperationEnum.GENERATE_SQL].id
-                if OperationEnum.GENERATE_CHART in self.current_logs:
-                    finish_data['chart_log_id'] = self.current_logs[OperationEnum.GENERATE_CHART].id
+                sql_log = self.current_logs.get(OperationEnum.GENERATE_SQL)
+                chart_log = self.current_logs.get(OperationEnum.GENERATE_CHART)
+                if sql_log and sql_log.id:
+                    finish_data['sql_log_id'] = sql_log.id
+                if chart_log and chart_log.id:
+                    finish_data['chart_log_id'] = chart_log.id
                 yield 'data:' + orjson.dumps(finish_data).decode() + '\n\n'
             else:
                 # todo generate picture
@@ -1557,7 +1591,7 @@ class LLMService:
                 # 通用错误 - 只返回类型标识
                 error_msg = orjson.dumps({'type': 'general-err'}).decode()
             if _session:
-                self.save_error(session=_session, message=error_msg)
+                self.safe_save_error(session=_session, message=error_msg)
             if in_chat:
                 yield 'data:' + orjson.dumps({'content': error_msg, 'type': 'error'}).decode() + '\n\n'
             else:
@@ -1568,7 +1602,7 @@ class LLMService:
                     json_result['message'] = error_msg
                     yield json_result
         finally:
-            self.finish(_session)
+            self.safe_finish(_session)
             session_maker.remove()
 
     def run_recommend_questions_task_async(self):
@@ -1641,7 +1675,6 @@ class LLMService:
 
                 yield 'data:' + orjson.dumps({'type': 'predict_finish'}).decode() + '\n\n'
 
-            self.finish(_session)
         except Exception as e:
             error_msg: str
             if isinstance(e, SingleMessageError):
@@ -1649,10 +1682,11 @@ class LLMService:
             else:
                 error_msg = orjson.dumps({'message': str(e), 'traceback': traceback.format_exc(limit=1)}).decode()
             if _session:
-                self.save_error(session=_session, message=error_msg)
+                self.safe_save_error(session=_session, message=error_msg)
             yield 'data:' + orjson.dumps({'content': error_msg, 'type': 'error'}).decode() + '\n\n'
         finally:
             # end
+            self.safe_finish(_session)
             session_maker.remove()
 
     def validate_history_ds(self, session: Session):

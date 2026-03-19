@@ -266,7 +266,7 @@ def build_query_sql(table_name: str, field_name: str, field_value: str, offset: 
     extra_joins = extra_joins or []
     extra_conditions = extra_conditions or []
 
-    # theme_name 字段走固定关联 SQL
+    # theme_name 字段走固定关联 SQL（使用模糊匹配）
     if field_name == 'theme_name':
         sql = f"""
             SELECT DISTINCT
@@ -276,12 +276,12 @@ def build_query_sql(table_name: str, field_name: str, field_value: str, offset: 
                 r.article_url,
                 r.thumbs_count AS likes
             FROM fx_theme t
-            JOIN fx_education_articles_legal l ON t.theme_name = l.Legal_topics
+            JOIN fx_education_articles_legal l ON l.Legal_topics LIKE CONCAT('%', t.theme_name, '%')
             JOIN fx_education_articles e ON l.article_id = e.article_id
             JOIN fx_article_records r ON e.article_id = r.article_id
             WHERE t.status = 1
               AND e.type_class = '1'
-              AND t.theme_name = '{field_value}'
+              AND t.theme_name LIKE '%{field_value}%'
               AND r.publish_time >= t.start_date
               AND r.publish_time < DATE_ADD(t.end_date, INTERVAL 1 DAY)
             ORDER BY r.publish_time DESC
@@ -301,7 +301,7 @@ def build_query_sql(table_name: str, field_name: str, field_value: str, offset: 
             SELECT DISTINCT
                 r.article_title,
                 r.publish_time,
-                r.view_count,
+                r.view_count, 
                 r.article_url,
                 r.thumbs_count AS likes
             FROM fx_education_articles e
@@ -365,17 +365,17 @@ def build_count_sql(table_name: str, field_name: str, field_value: str,
     extra_joins = extra_joins or []
     extra_conditions = extra_conditions or []
 
-    # theme_name 字段走固定关联 SQL
+    # theme_name 字段走固定关联 SQL（使用模糊匹配）
     if field_name == 'theme_name':
         sql = f"""
             SELECT COUNT(DISTINCT r.article_id) AS total
             FROM fx_theme t
-            JOIN fx_education_articles_legal l ON t.theme_name = l.Legal_topics
+            JOIN fx_education_articles_legal l ON l.Legal_topics LIKE CONCAT('%', t.theme_name, '%')
             JOIN fx_education_articles e ON l.article_id = e.article_id
             JOIN fx_article_records r ON e.article_id = r.article_id
             WHERE t.status = 1
               AND e.type_class = '1'
-              AND t.theme_name = '{field_value}'
+              AND t.theme_name LIKE '%{field_value}%'
               AND r.publish_time >= t.start_date
               AND r.publish_time < DATE_ADD(t.end_date, INTERVAL 1 DAY)
         """

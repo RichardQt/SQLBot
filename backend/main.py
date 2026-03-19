@@ -16,6 +16,7 @@ from apps.api import api_router
 from common.utils.embedding_threads import fill_empty_table_and_ds_embeddings
 from apps.system.crud.aimodel_manage import async_model_info
 from apps.system.crud.assistant import init_dynamic_cors
+from common.core.db import sync_chat_log_id_sequence
 from apps.system.middleware.auth import TokenMiddleware
 from common.core.config import settings
 from common.core.security_check import enforce_security_check
@@ -73,6 +74,7 @@ async def lifespan(app: FastAPI):
     enforce_security_check(settings.SECRET_KEY, strict_mode=True)
     
     run_migrations()
+    sync_chat_log_id_sequence()
     init_sqlbot_cache()
     init_dynamic_cors(app)
     preload_embedding_model()  # 预加载 embedding 模型

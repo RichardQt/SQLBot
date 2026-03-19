@@ -4,14 +4,16 @@ from typing import List, Any
 import orjson
 import sqlparse
 from sqlalchemy import and_, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import aliased
 
 from apps.chat.models.chat_model import Chat, ChatRecord, CreateChat, ChatInfo, RenameChat, ChatQuestion, ChatLog, \
     TypeEnum, OperationEnum, ChatRecordResult
 from apps.datasource.models.datasource import CoreDatasource
 from apps.system.crud.assistant import AssistantOutDsFactory
+from common.core.db import sync_chat_log_id_sequence
 from common.core.deps import CurrentAssistant, SessionDep, CurrentUser
-from common.utils.utils import extract_nested_json
+from common.utils.utils import SQLBotLogUtil, extract_nested_json
 
 
 def get_chat_record_by_id(session: SessionDep, record_id: int):
@@ -514,18 +516,45 @@ def save_analysis_predict_record(session: SessionDep, base_record: ChatRecord, a
 
 def start_log(session: SessionDep, ai_modal_id: int, ai_modal_name: str, operate: OperationEnum, record_id: int,
               full_message: list[dict]) -> ChatLog:
-    log = ChatLog(type=TypeEnum.CHAT, operate=operate, pid=record_id, ai_modal_id=ai_modal_id, base_modal=ai_modal_name,
-                  messages=full_message, start_time=datetime.datetime.now())
+    def build_log() -> ChatLog:
+        return ChatLog(
+            type=TypeEnum.CHAT,
+            operate=operate,
+            pid=record_id,
+            ai_modal_id=ai_modal_id,
+            base_modal=ai_modal_name,
+            messages=full_message,
+            start_time=datetime.datetime.now()
+        )
 
-    result = ChatLog(**log.model_dump())
+    def persist_log(log: ChatLog) -> ChatLog:
+        session.add(log)
+        session.flush()
+        session.refresh(log)
+        session.commit()
+        return log
 
-    session.add(log)
-    session.flush()
-    session.refresh(log)
-    result.id = log.id
-    session.commit()
+    log = build_log()
+    try:
+        log = persist_log(log)
+    except IntegrityError as exc:
+        session.rollback()
+        error_message = str(exc)
+        if "chat_log_pkey" in error_message and "duplicate key value violates unique constraint" in error_message:
+            SQLBotLogUtil.error("chat_log sequence drift detected, attempting repair and retry")
+            try:
+                sync_chat_log_id_sequence()
+                log = persist_log(build_log())
+            except Exception as retry_exc:
+                session.rollback()
+                SQLBotLogUtil.error(f"chat_log retry failed after sequence repair: {retry_exc}")
+        else:
+            SQLBotLogUtil.error(f"chat_log insert failed: {exc}")
+    except Exception as exc:
+        session.rollback()
+        SQLBotLogUtil.error(f"chat_log insert failed: {exc}")
 
-    return result
+    return ChatLog(**log.model_dump())
 
 
 def end_log(session: SessionDep, log: ChatLog, full_message: list[dict], reasoning_content: str = None,
@@ -537,14 +566,21 @@ def end_log(session: SessionDep, log: ChatLog, full_message: list[dict], reasoni
     log.finish_time = datetime.datetime.now()
     log.reasoning_content = reasoning_content if reasoning_content and len(reasoning_content.strip()) > 0 else None
 
+    if not log.id:
+        return log
+
     stmt = update(ChatLog).where(and_(ChatLog.id == log.id)).values(
         messages=log.messages,
         token_usage=log.token_usage,
         finish_time=log.finish_time,
         reasoning_content=log.reasoning_content
     )
-    session.execute(stmt)
-    session.commit()
+    try:
+        session.execute(stmt)
+        session.commit()
+    except Exception as exc:
+        session.rollback()
+        SQLBotLogUtil.error(f"chat_log update failed: {exc}")
 
     return log
 

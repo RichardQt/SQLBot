@@ -1,6 +1,6 @@
 services:
   sqlbot:
-    image: registry.cn-heyuan.aliyuncs.com/images-lsr/sqlbot_fx:v3.0.3
+    image: registry.cn-heyuan.aliyuncs.com/images-lsr/sqlbot_fx:v3.1.0
     container_name: sqlbot_fx
     restart: always
     privileged: true
@@ -9,7 +9,7 @@ services:
     ports:
       - 18000:8000
       - 8001:8001
-      - 5432:5432
+      - 5433:5432
     environment:
       # Database configuration
       POSTGRES_SERVER: localhost
