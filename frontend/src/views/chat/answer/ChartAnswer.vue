@@ -3,6 +3,7 @@ import BaseAnswer from './BaseAnswer.vue'
 import { Chat, chatApi, ChatInfo, type ChatMessage, ChatRecord, questionApi } from '@/api/chat.ts'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import ChartBlock from '@/views/chat/chat-block/ChartBlock.vue'
+import MdComponent from '@/views/chat/component/MdComponent.vue'
 import StepProgress from '@/components/StepProgress.vue'
 import { appendMeaningfulText } from '@/utils/text'
 
@@ -513,6 +514,16 @@ const sendMessage = async () => {
                 }
                 break
               }
+              case 'activity_report': {
+                _currentChat.value.records[index.value].activity_report = data.content
+                _currentChat.value.records[index.value].analysis = data.content
+                stepResults.value[4] = data.content
+                const step4 = steps.value.find((s: ProcessingStep) => s.id === 4)
+                if (step4) {
+                  step4.result = '活动开展情况查询完成'
+                }
+                break
+              }
               case 'finish':
                 // Update log IDs for feedback feature
                 if (data.sql_log_id) {
@@ -641,6 +652,10 @@ defineExpose({ sendMessage, index: () => index.value, stop })
       overall-title="SQL分析进度"
       style="margin-bottom: 16px"
     />
+
+    <div v-if="message?.record?.activity_report" style="margin-bottom: 12px">
+      <MdComponent :message="message.record.activity_report" />
+    </div>
 
     <ChartBlock style="margin-top: 6px" :message="message" />
     <slot></slot>

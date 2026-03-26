@@ -40,6 +40,7 @@ class OperationEnum(Enum):
     GENERATE_SQL_WITH_PERMISSIONS = '5'
     CHOOSE_DATASOURCE = '6'
     GENERATE_DYNAMIC_SQL = '7'
+    QUERY_ACTIVITY = '8'
 
 
 class ChatFinishStep(Enum):

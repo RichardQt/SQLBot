@@ -189,6 +189,8 @@ cython_debug/
 .DS_Store
 test.py
 
+test
+test.txt
 
 !/.venv/
 .claude/*
@@ -326,3 +328,5 @@ frontend/.dist-smoke/tinymce-dataease-private/skins/ui/oxide-dark/skin.mobile.mi
 frontend/.dist-smoke/tinymce-dataease-private/skins/ui/oxide-dark/skin.shadowdom.css
 frontend/.dist-smoke/tinymce-dataease-private/skins/ui/oxide-dark/skin.shadowdom.min.css
 frontend/.dist-smoke/tinymce-dataease-private/skins/ui/oxide-dark/fonts/tinymce-mobile.woff
+backend/logs/debug.log.1
+docker-compose.yaml

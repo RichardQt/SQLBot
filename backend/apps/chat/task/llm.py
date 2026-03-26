@@ -35,6 +35,8 @@ from apps.chat.models.chat_model import ChatQuestion, ChatRecord, Chat, RenameCh
     ChatFinishStep
 from apps.chat.task.context_analyzer import ContextAnalyzer
 from apps.chat.task.question_completer import QuestionCompleter
+from apps.chat.task.activity_service import ActivityService
+from apps.chat.task.question_classifier import is_activity_query, extract_unit_name
 from apps.data_training.curd.data_training import get_training_template
 from apps.datasource.crud.datasource import get_table_schema
 from apps.datasource.crud.permission import get_row_permission_filters, is_normal_user
@@ -1307,6 +1309,75 @@ class LLMService:
             # 步骤3: 连接数据库 - 完成
             if in_chat:
                 yield emit_step_complete(3, '已连接数据库', min_duration=MIN_STEP_DURATIONS.get(3))
+
+            # 活动开展情况分支：不走SQL生成，直接查询固定表并渲染文本
+            activity_source_question = (
+                original_question
+                if is_activity_query(original_question)
+                else self.chat_question.question
+            )
+            if is_activity_query(activity_source_question):
+                SQLBotLogUtil.info(
+                    f"[activity] 命中活动分支: source_question={activity_source_question}, original_question={original_question}, current_question={self.chat_question.question}"
+                )
+                if in_chat:
+                    yield emit_step_start(4, '正在查询活动开展情况...')
+
+                unit_name = extract_unit_name(activity_source_question)
+                SQLBotLogUtil.info(f"[activity] 提取单位名称: unit_name={unit_name}")
+                activity_service = ActivityService(self.ds)
+                activity_messages: List[dict[str, Any]] = [
+                    {
+                        'type': 'human',
+                        'content': activity_source_question,
+                    }
+                ]
+
+                self.current_logs[OperationEnum.QUERY_ACTIVITY] = start_log(
+                    session=_session,
+                    ai_modal_id=self.chat_question.ai_modal_id,
+                    ai_modal_name=self.chat_question.ai_modal_name,
+                    operate=OperationEnum.QUERY_ACTIVITY,
+                    record_id=self.record.id,
+                    full_message=activity_messages,
+                )
+
+                activity_data = activity_service.query_activity_data(unit_name)
+                SQLBotLogUtil.info(f"[activity] 查询聚合数据完成: data={activity_data}")
+                report = activity_service.render_activity_report(unit_name, activity_data)
+                SQLBotLogUtil.info(
+                    f"[activity] 报告生成完成: report_len={len(report)}, is_empty={not bool(report.strip())}"
+                )
+
+                activity_messages.append({'type': 'ai', 'content': report})
+                self.current_logs[OperationEnum.QUERY_ACTIVITY] = end_log(
+                    session=_session,
+                    log=self.current_logs[OperationEnum.QUERY_ACTIVITY],
+                    full_message=activity_messages,
+                    token_usage={},
+                )
+
+                self.record = save_analysis_answer(
+                    session=_session,
+                    record_id=self.record.id,
+                    answer=orjson.dumps({'content': report}).decode(),
+                )
+
+                if in_chat:
+                    yield emit_step_complete(4, '活动开展情况查询完成')
+                    yield 'data:' + orjson.dumps({'type': 'activity_report', 'content': report}).decode() + '\n\n'
+                    finish_data = {'type': 'finish'}
+                    activity_log = self.current_logs.get(OperationEnum.QUERY_ACTIVITY)
+                    if activity_log and activity_log.id:
+                        finish_data['activity_log_id'] = activity_log.id
+                    yield 'data:' + orjson.dumps(finish_data).decode() + '\n\n'
+                else:
+                    if stream:
+                        yield report + '\n\n'
+                    else:
+                        json_result['activity_report'] = report
+                        yield json_result
+                return
 
             # 步骤4: 生成SQL - 开始
             if in_chat:
