@@ -27,12 +27,12 @@ def test_render_activity_report():
             "免费法律咨询": "3",
             "现场咨询": "5",
             "法律法规": "宪法",
-            "普法宣传活动": "是",
+            "普法宣传活动": "2",
         },
     )
 
     assert "XX单位普法与法律活动开展情况报告" in report
-    assert "免费法律咨询** 3 人次" in report
+    assert "免费提供法律咨询3 人次" in report
     assert "法律法规" in report
     assert "宪法" in report
 
@@ -57,5 +57,27 @@ def test_query_activity_data_by_keyword(monkeypatch):
     assert row == {
         "免费法律咨询": "3",
         "法律法规": "宪法",
-        "普法宣传活动": "是",
+        "普法宣传活动": "1",
+    }
+
+
+def test_query_activity_data_boolean_count(monkeypatch):
+    def fake_exec_sql(_self, sql):
+        return {
+            "fields": ["keyword_answer", "service_logic", "result_value"],
+            "data": [
+                {"keyword_answer": "普法宣传活动", "service_logic": "2", "result_value": "1"},
+                {"keyword_answer": "普法宣传活动", "service_logic": "2", "result_value": "0"},
+                {"keyword_answer": "普法宣传活动", "service_logic": "2", "result_value": "2"},
+                {"keyword_answer": "普法宣传活动", "service_logic": "2", "result_value": "0"},
+            ],
+        }
+
+    monkeypatch.setattr(ActivityService, "_exec_sql", fake_exec_sql)
+
+    service = ActivityService(SimpleNamespace(type="pg"))
+    row = service.query_activity_data("XX单位")
+
+    assert row == {
+        "普法宣传活动": "2",
     }

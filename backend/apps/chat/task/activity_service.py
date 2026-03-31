@@ -145,6 +145,28 @@ class ActivityService:
             return []
         return [value for _ in range(count)]
 
+    @staticmethod
+    def _is_non_zero_value(value: Any) -> bool:
+        """判断值是否属于“非0”，用于布尔型计次。"""
+        if value is None:
+            return False
+
+        if isinstance(value, bool):
+            return value
+
+        if isinstance(value, (int, float)):
+            return value != 0
+
+        text = str(value).strip()
+        if not text:
+            return False
+
+        try:
+            return float(text) != 0
+        except ValueError:
+            # 兼容历史脏数据：无法转数值时，非空且不等于"0"也视作一次有效计数
+            return text != "0"
+
     def _aggregate_by_logic(self, service_logic: int, records: list[dict[str, Any]]) -> str:
         """根据 service_logic 对 result_value 进行聚合。
         
@@ -185,19 +207,15 @@ class ActivityService:
             return result
 
         elif service_logic == 2:
-            # 逻辑 2：布尔判断（非0/非空值为true）
-            for r in records:
-                val = r.get("result_value")
-                # 检查非零、非空字符串
-                if val and str(val).strip() and str(val).strip() != "0":
-                    SQLBotLogUtil.info(
-                        f"[activity] 聚合完成: logic=2, records={len(records)}, result=是"
-                    )
-                    return "已开展相应活动"
-            SQLBotLogUtil.info(
-                f"[activity] 聚合完成: logic=2, records={len(records)}, result=否"
+            # 逻辑 2：布尔计次（每条记录 result_value 非0 则计 1 次）
+            count = sum(
+                1 for r in records if self._is_non_zero_value(r.get("result_value"))
             )
-            return "暂未开展相应活动"
+            result = str(count)
+            SQLBotLogUtil.info(
+                f"[activity] 聚合完成: logic=2, records={len(records)}, non_zero_count={count}"
+            )
+            return result
 
         SQLBotLogUtil.warning(f"[activity] 未知聚合逻辑: logic={service_logic}")
         return ""
@@ -291,7 +309,7 @@ class ActivityService:
         Returns:
             格式化的活动报告字符串
         """
-        template_path = Path(__file__).resolve().parents[3] / "templates" / "activity_report.txt"
+        template_path = Path(__file__).resolve().parents[3] / "templates" / "activity_report.md"
         template_content = template_path.read_text(encoding="utf-8")
         SQLBotLogUtil.info(
             f"[activity] 开始渲染报告: template={template_path}, template_len={len(template_content)}"
