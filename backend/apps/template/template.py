@@ -9,6 +9,7 @@ from apps.db.constant import DB
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 TEMPLATES_DIR = PROJECT_ROOT / 'templates'
 BASE_TEMPLATE_PATH = TEMPLATES_DIR / 'template.yaml'
+ACTIVITY_EXTRACT_TEMPLATE_PATH = TEMPLATES_DIR / 'activity_extract.yaml'
 SQL_TEMPLATES_DIR = TEMPLATES_DIR / 'sql_examples'
 
 
@@ -27,6 +28,11 @@ def _load_template_file(file_path: Path):
 def get_base_template():
     """获取基础模板（自动缓存）"""
     return _load_template_file(BASE_TEMPLATE_PATH)
+
+
+def get_activity_extract_template_file():
+    """获取活动查询参数提取模板（自动缓存）"""
+    return _load_template_file(ACTIVITY_EXTRACT_TEMPLATE_PATH)
 
 
 def get_sql_template(db_type: Union[str, DB]):

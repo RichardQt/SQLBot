@@ -36,7 +36,8 @@ from apps.chat.models.chat_model import ChatQuestion, ChatRecord, Chat, RenameCh
 from apps.chat.task.context_analyzer import ContextAnalyzer
 from apps.chat.task.question_completer import QuestionCompleter
 from apps.chat.task.activity_service import ActivityService
-from apps.chat.task.question_classifier import is_activity_query, extract_unit_name
+from apps.chat.task.activity_query_extractor import ActivityQueryExtractor
+from apps.chat.task.question_classifier import is_activity_query, resolve_activity_template
 from apps.data_training.curd.data_training import get_training_template
 from apps.datasource.crud.datasource import get_table_schema
 from apps.datasource.crud.permission import get_row_permission_filters, is_normal_user
@@ -1076,6 +1077,7 @@ class LLMService:
         json_result: Dict[str, Any] = {'success': True}
         _session = None
         step_metrics: Dict[int, Dict[str, Any]] = {}
+        activity_extract_result = None
 
         def format_step_event(payload: Dict[str, Any]) -> str:
             return 'data:' + orjson.dumps(payload).decode() + '\n\n'
@@ -1231,6 +1233,23 @@ class LLMService:
                 yield emit_step_progress(1, 85, '构建初始提示词')
                 time.sleep(0.05)
 
+            activity_source_question = (
+                original_question
+                if is_activity_query(original_question)
+                else self.chat_question.question
+            )
+            if is_activity_query(activity_source_question):
+                try:
+                    extractor = ActivityQueryExtractor(self.llm, self.chat_question.lang)
+                    activity_extract_result = extractor.extract(
+                        activity_source_question,
+                        current_time=datetime.now(),
+                    )
+                except Exception as extract_error:
+                    SQLBotLogUtil.warning(
+                        f"[activity] 步骤1提取预处理失败，后续将重试: err={extract_error}"
+                    )
+
             # 步骤1: 分析问题 - 完成
             if in_chat:
                 step1_result = {
@@ -1239,6 +1258,18 @@ class LLMService:
                     'intent_realization': intent_result,
                     'question_completed': original_question != self.chat_question.question
                 }
+                if activity_extract_result is not None:
+                    step1_result['activity_extraction'] = {
+                        'unit_name': activity_extract_result.unit_name,
+                        'year': activity_extract_result.year,
+                        'month': activity_extract_result.month,
+                        'start_year': activity_extract_result.start_year,
+                        'start_month': activity_extract_result.start_month,
+                        'end_year': activity_extract_result.end_year,
+                        'end_month': activity_extract_result.end_month,
+                        'start_date': activity_extract_result.start_date,
+                        'end_date': activity_extract_result.end_date,
+                    }
                 # 根据是否补全问题，显示不同的完成消息
                 if original_question != self.chat_question.question:
                     step1_message = f'问题分析完成'
@@ -1323,8 +1354,27 @@ class LLMService:
                 if in_chat:
                     yield emit_step_start(4, '正在查询活动开展情况...')
 
-                unit_name = extract_unit_name(activity_source_question)
-                SQLBotLogUtil.info(f"[activity] 提取单位名称: unit_name={unit_name}")
+                extract_result = activity_extract_result
+                if extract_result is None:
+                    extractor = ActivityQueryExtractor(self.llm, self.chat_question.lang)
+                    extract_result = extractor.extract(activity_source_question, current_time=datetime.now())
+                unit_name = extract_result.unit_name
+                year = extract_result.year
+                month = extract_result.month
+                start_year = extract_result.start_year
+                start_month = extract_result.start_month
+                end_year = extract_result.end_year
+                end_month = extract_result.end_month
+                start_date = extract_result.start_date
+                end_date = extract_result.end_date
+                SQLBotLogUtil.info(
+                    "[activity] 大模型提取完成: "
+                    f"unit_name={unit_name}, year={year}, month={month}, "
+                    f"start={start_year}-{start_month}, end={end_year}-{end_month}, "
+                    f"start_date={start_date}, end_date={end_date}"
+                )
+                template_name = resolve_activity_template(activity_source_question) or "activity_report.md"
+                SQLBotLogUtil.info(f"[activity] 选择报告模板: template={template_name}")
                 activity_service = ActivityService(self.ds)
                 activity_messages: List[dict[str, Any]] = [
                     {
@@ -1342,9 +1392,23 @@ class LLMService:
                     full_message=activity_messages,
                 )
 
-                activity_data = activity_service.query_activity_data(unit_name)
+                activity_data = activity_service.query_activity_data(
+                    unit_name=unit_name,
+                    year=year,
+                    month=month,
+                    start_year=start_year,
+                    start_month=start_month,
+                    end_year=end_year,
+                    end_month=end_month,
+                    start_date=start_date,
+                    end_date=end_date,
+                )
                 SQLBotLogUtil.info(f"[activity] 查询聚合数据完成: data={activity_data}")
-                report = activity_service.render_activity_report(unit_name, activity_data)
+                report = activity_service.render_activity_report(
+                    unit_name,
+                    activity_data,
+                    template_name=template_name,
+                )
                 SQLBotLogUtil.info(
                     f"[activity] 报告生成完成: report_len={len(report)}, is_empty={not bool(report.strip())}"
                 )

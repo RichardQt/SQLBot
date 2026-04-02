@@ -175,6 +175,44 @@ const pushStepDetail = (step: ProcessingStep, detail: unknown) => {
   step.details.push(text)
 }
 
+const formatActivityExtractionResult = (result: any): string | undefined => {
+  const extraction = result?.activity_extraction
+  if (!extraction) {
+    return undefined
+  }
+
+  const lines: string[] = []
+  if (extraction.unit_name) {
+    lines.push(`单位名称: ${extraction.unit_name}`)
+  }
+
+  if (extraction.start_date && extraction.end_date) {
+    lines.push(`时间范围: ${extraction.start_date} 至 ${extraction.end_date}`)
+    return lines.join('\n')
+  }
+
+  if (
+    extraction.start_year &&
+    extraction.start_month &&
+    extraction.end_year &&
+    extraction.end_month
+  ) {
+    lines.push(
+      `时间范围: ${extraction.start_year}-${String(extraction.start_month).padStart(2, '0')} 至 ${extraction.end_year}-${String(extraction.end_month).padStart(2, '0')}`
+    )
+    return lines.join('\n')
+  }
+
+  if (extraction.year) {
+    lines.push(`年份: ${extraction.year}`)
+  }
+  if (extraction.month) {
+    lines.push(`月份: ${extraction.month}月`)
+  }
+
+  return lines.length > 0 ? lines.join('\n') : undefined
+}
+
 // 处理步骤事件
 const handleStepEvent = (data: any) => {
   showSteps.value = true
@@ -230,6 +268,12 @@ const handleStepEvent = (data: any) => {
       // 保存步骤结果数据
       if (data.result) {
         stepResults.value[stepId] = data.result
+        if (stepId === 1) {
+          const extractionText = formatActivityExtractionResult(data.result)
+          if (extractionText) {
+            step.result = extractionText
+          }
+        }
         // 特殊处理SQL执行结果（步骤5）
         if (stepId === 5) {
           const result = data.result

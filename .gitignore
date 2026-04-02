@@ -198,7 +198,6 @@ test.txt
 .claude/context-summary-data-predict.md
 .claude/operations-log.md
 .github/instructions/rules.instructions.md
-*.md
 backend/docs/text2sql-technical-implementation.md
 .github/instructions/rules.instructions.md
 backend/logs/*
@@ -330,3 +329,10 @@ frontend/.dist-smoke/tinymce-dataease-private/skins/ui/oxide-dark/skin.shadowdom
 frontend/.dist-smoke/tinymce-dataease-private/skins/ui/oxide-dark/fonts/tinymce-mobile.woff
 backend/logs/debug.log.1
 docker-compose.yaml
+scripts/PROJECT_ARCHITECTURE_REPORT.md
+scripts/requirements.md
+scripts/tasks.md
+backend/logs/debug.log.1
+frontend/.dist-smoke/tinymce/langs/README.md
+frontend/.dist-smoke/tinymce/license.md
+backend/.claude/activity_aggregation_upgrade.md
